@@ -81,10 +81,14 @@ export default function EquipmentPage() {
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredEquipment = equipment.filter(
-    (eq) =>
-      eq.name.toLowerCase().includes("") ||
-      eq.category.toLowerCase().includes("") ||
-      eq.serialNumber.toLowerCase().includes("")
+    (eq) => {
+      const query = searchQuery.toLowerCase();
+      return (
+        eq.name.toLowerCase().includes(query) ||
+        eq.category.toLowerCase().includes(query) ||
+        eq.serialNumber.toLowerCase().includes(query)
+      );
+    }
   );
 
   const stats = {

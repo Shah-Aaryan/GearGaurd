@@ -11,19 +11,24 @@ import {
   isSameDay,
   addMonths,
   subMonths,
+  parseISO,
 } from "date-fns";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Clock, AlertTriangle, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { mockCalendarEvents, CalendarEvent } from "@/data/mockData";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { mockMaintenanceRequests, MaintenanceRequest } from "@/data/mockData";
+import { useMaintenanceRequests } from "@/context/MaintenanceContext";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { MaintenanceForm } from "@/components/maintenance/MaintenanceForm";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -41,9 +46,11 @@ const itemVariants = {
 };
 
 export default function Calendar() {
+  const { requests } = useMaintenanceRequests();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(monthStart);
@@ -57,19 +64,58 @@ export default function Calendar() {
     day = addDays(day, 1);
   }
 
-  const getEventsForDate = (date: Date): CalendarEvent[] => {
-    return mockCalendarEvents.filter(
-      (event) => event.date === format(date, "yyyy-MM-dd")
+  // Get maintenance requests for a specific date
+  const getRequestsForDate = (date: Date): MaintenanceRequest[] => {
+    const dateStr = format(date, "yyyy-MM-dd");
+    return requests.filter(
+      (req) => {
+        try {
+          // Use scheduledDate field from the MaintenanceRequest
+          const reqDate = parseISO(req.scheduledDate);
+          return format(reqDate, "yyyy-MM-dd") === dateStr && 
+                 (req.stage === "new" || req.stage === "in-progress");
+        } catch {
+          return false;
+        }
+      }
     );
   };
 
   const handleDateClick = (date: Date) => {
-    setSelectedDate(date);
-    setShowForm(true);
+    const reqs = getRequestsForDate(date);
+    if (reqs.length > 0) {
+      setSelectedDate(date);
+      setShowDetails(true);
+    } else {
+      setSelectedDate(date);
+      setShowForm(true);
+    }
   };
 
   const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));
   const prevMonth = () => setCurrentDate(subMonths(currentDate, 1));
+
+  const getStageIcon = (stage: string) => {
+    switch (stage) {
+      case "new":
+        return <AlertTriangle className="h-4 w-4 text-warning" />;
+      case "in-progress":
+        return <Clock className="h-4 w-4 text-info" />;
+      default:
+        return <CheckCircle className="h-4 w-4 text-success" />;
+    }
+  };
+
+  const getStageColor = (stage: string) => {
+    switch (stage) {
+      case "new":
+        return "bg-warning/20 text-warning";
+      case "in-progress":
+        return "bg-info/20 text-info";
+      default:
+        return "bg-success/20 text-success";
+    }
+  };
 
   return (
     <motion.div
@@ -128,7 +174,7 @@ export default function Calendar() {
           className="grid grid-cols-7 gap-1"
         >
           {days.map((dayDate, index) => {
-            const events = getEventsForDate(dayDate);
+            const dayRequests = getRequestsForDate(dayDate);
             const isCurrentMonth = isSameMonth(dayDate, currentDate);
             const isToday = isSameDay(dayDate, new Date());
 
@@ -136,36 +182,33 @@ export default function Calendar() {
               <motion.div
                 key={index}
                 variants={itemVariants}
-                className={`min-h-[100px] rounded-lg border p-2 transition-colors cursor-pointer hover:bg-accent ${
+                className={`min-h-[120px] rounded-lg border p-2 transition-colors cursor-pointer hover:bg-accent ${
                   isCurrentMonth ? "bg-card" : "bg-muted/30"
-                } ${isToday ? "ring-2 ring-primary" : ""}`}
+                } ${isToday ? "ring-2 ring-primary" : ""} ${dayRequests.length > 0 ? "border-primary/50" : ""}`}
                 onClick={() => handleDateClick(dayDate)}
               >
                 <div
-                  className={`text-sm font-medium mb-1 ${
+                  className={`text-sm font-medium mb-2 ${
                     isCurrentMonth ? "text-foreground" : "text-muted-foreground"
                   } ${isToday ? "text-primary" : ""}`}
                 >
                   {format(dayDate, "d")}
                 </div>
                 <div className="space-y-1">
-                  {events.slice(0, 2).map((event) => (
+                  {dayRequests.slice(0, 3).map((req) => (
                     <motion.div
-                      key={event.id}
+                      key={req.id}
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
-                      className={`text-xs p-1 rounded truncate ${
-                        event.type === "preventive"
-                          ? "bg-success/20 text-success"
-                          : "bg-warning/20 text-warning"
-                      }`}
+                      className={`text-xs p-1 rounded truncate flex items-center gap-1 ${getStageColor(req.stage)}`}
                     >
-                      {event.title}
+                      {getStageIcon(req.stage)}
+                      <span className="truncate">{req.subject}</span>
                     </motion.div>
                   ))}
-                  {events.length > 2 && (
-                    <div className="text-xs text-muted-foreground">
-                      +{events.length - 2} more
+                  {dayRequests.length > 3 && (
+                    <div className="text-xs text-muted-foreground pl-1">
+                      +{dayRequests.length - 3} more
                     </div>
                   )}
                 </div>
@@ -177,56 +220,148 @@ export default function Calendar() {
         {/* Legend */}
         <div className="mt-6 flex gap-6 justify-center">
           <div className="flex items-center gap-2">
-            <div className="h-3 w-3 rounded bg-success/20" />
-            <span className="text-sm text-muted-foreground">Preventive</span>
+            <AlertTriangle className="h-4 w-4 text-warning" />
+            <span className="text-sm text-muted-foreground">New Request</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="h-3 w-3 rounded bg-warning/20" />
-            <span className="text-sm text-muted-foreground">Corrective</span>
+            <Clock className="h-4 w-4 text-info" />
+            <span className="text-sm text-muted-foreground">In Progress</span>
           </div>
         </div>
       </Card>
 
       {/* Upcoming Events */}
       <Card className="p-6">
-        <h3 className="text-lg font-semibold mb-4">Upcoming Maintenance</h3>
+        <h3 className="text-lg font-semibold mb-4">Upcoming Maintenance Requests</h3>
         <div className="space-y-3">
-          {mockCalendarEvents.slice(0, 4).map((event, index) => (
+          {requests
+            .filter((req) => req.stage === "new" || req.stage === "in-progress")
+            .sort((a, b) => {
+              try {
+                const dateA = parseISO(a.scheduledDate).getTime();
+                const dateB = parseISO(b.scheduledDate).getTime();
+                return dateA - dateB;
+              } catch {
+                return 0;
+              }
+            })
+            .slice(0, 5)
+            .map((req, index) => (
             <motion.div
-              key={event.id}
+              key={req.id}
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: index * 0.1 }}
-              className="flex items-center gap-4 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+              className="flex items-center gap-4 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
+              onClick={() => {
+                setSelectedDate(new Date());
+                setShowDetails(true);
+              }}
             >
-              <div className="text-center">
-                <div className="text-2xl font-bold text-primary">
-                  {format(new Date(event.date), "d")}
-                </div>
-                <div className="text-xs text-muted-foreground uppercase">
-                  {format(new Date(event.date), "MMM")}
-                </div>
+              <div className={`p-2 rounded ${getStageColor(req.stage)}`}>
+                {getStageIcon(req.stage)}
               </div>
               <div className="flex-1">
-                <h4 className="font-medium">{event.title}</h4>
+                <h4 className="font-medium">{req.subject}</h4>
                 <p className="text-sm text-muted-foreground">
-                  {event.equipment} • {event.technician}
+                  {req.equipment} ΓÇó {req.technician}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Scheduled: {format(parseISO(req.scheduledDate), "MMM d, yyyy")}
                 </p>
               </div>
               <Badge
                 variant="secondary"
-                className={
-                  event.type === "preventive"
-                    ? "bg-success/20 text-success"
-                    : "bg-warning/20 text-warning"
-                }
+                className={getStageColor(req.stage)}
               >
-                {event.type}
+                {req.stage}
               </Badge>
             </motion.div>
           ))}
         </div>
       </Card>
+
+      {/* Details Dialog - Show all requests for selected date */}
+      <Dialog open={showDetails} onOpenChange={setShowDetails}>
+        <DialogContent className="max-w-2xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedDate
+                ? `Maintenance Requests for ${format(selectedDate, "MMMM d, yyyy")}`
+                : "Maintenance Requests"}
+            </DialogTitle>
+            <DialogDescription>
+              Click on a request to view full details
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="h-[400px] pr-4">
+            <div className="space-y-4">
+              {selectedDate && getRequestsForDate(selectedDate).length > 0 ? (
+                getRequestsForDate(selectedDate).map((req) => (
+                  <motion.div
+                    key={req.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <h4 className="font-bold text-lg">{req.subject}</h4>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Equipment: <span className="font-medium">{req.equipment}</span>
+                        </p>
+                      </div>
+                      <Badge className={getStageColor(req.stage)}>
+                        {req.stage}
+                      </Badge>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
+                      <div>
+                        <p className="text-muted-foreground">Technician</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Avatar className="h-5 w-5">
+                            <AvatarImage src={req.technicianAvatar} />
+                            <AvatarFallback>
+                              {req.technician.charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="font-medium">{req.technician}</span>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Priority</p>
+                        <Badge variant="secondary" className="mt-1 capitalize">
+                          {req.priority}
+                        </Badge>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Duration</p>
+                        <p className="font-medium mt-1">{req.duration}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Work Center</p>
+                        <p className="font-medium mt-1">{req.workCenter}</p>
+                      </div>
+                    </div>
+
+                    {req.isOverdue && (
+                      <div className="p-2 rounded bg-destructive/10 text-destructive text-sm flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4" />
+                        This request is overdue
+                      </div>
+                    )}
+                  </motion.div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No maintenance requests scheduled for this date
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
 
       {/* New Maintenance Dialog */}
       <Dialog open={showForm} onOpenChange={setShowForm}>

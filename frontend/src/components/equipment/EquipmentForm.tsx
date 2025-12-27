@@ -17,7 +17,7 @@ import { Progress } from "@/components/ui/progress";
 import { Equipment, mockTeams } from "@/data/mockData";
 import { useEquipment } from "@/context/EquipmentContext";
 import { useMaintenanceRequests } from "@/context/MaintenanceContext";
-import { Wrench, ChevronRight, AlertTriangle, CheckCircle } from "lucide-react";
+import { Wrench, ChevronRight, AlertTriangle, CheckCircle, Send, Loader2, Mail } from "lucide-react";
 
 interface EquipmentFormProps {
   equipment?: Equipment;
@@ -37,6 +37,10 @@ export function EquipmentForm({ equipment, onClose }: EquipmentFormProps) {
   const navigate = useNavigate();
   const { requests } = useMaintenanceRequests();
   const { addEquipment } = useEquipment();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  
   const [formData, setFormData] = useState({
     name: equipment?.name || "",
     category: equipment?.category || "",
@@ -47,7 +51,12 @@ export function EquipmentForm({ equipment, onClose }: EquipmentFormProps) {
     maintenanceTeam: equipment?.maintenanceTeam || "",
     assignedDate: equipment?.assignedDate || "",
     description: equipment?.description || "",
+    // Add email field for Formspree verification
+    email: "shah123aarav@gmail.com",
   });
+
+  // Formspree endpoint
+  const FORMSPREE_ENDPOINT = "https://formspree.io/f/mdaoewdp";
 
   // Get open requests for this equipment from context
   const getOpenRequestsForEquipment = () => {
@@ -59,12 +68,16 @@ export function EquipmentForm({ equipment, onClose }: EquipmentFormProps) {
 
   const openRequests = getOpenRequestsForEquipment();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!equipment) {
-      // Add new equipment
-      const newEquipment: Equipment = {
-        id: `eq-${Date.now()}`,
+    setIsSubmitting(true);
+    setSubmitError(null);
+    
+    try {
+      // Prepare data for Formspree - include email field
+      const formspreeData = {
+        _subject: equipment ? `Equipment Update: ${formData.name}` : `New Equipment: ${formData.name}`,
+        email: formData.email, // REQUIRED for Formspree verification
         name: formData.name,
         category: formData.category,
         serialNumber: formData.serialNumber,
@@ -74,13 +87,94 @@ export function EquipmentForm({ equipment, onClose }: EquipmentFormProps) {
         maintenanceTeam: formData.maintenanceTeam,
         assignedDate: formData.assignedDate,
         description: formData.description,
-        health: 100,
-        status: 'operational',
-        openRequests: 0
+        formType: equipment ? "Equipment Update" : "New Equipment",
+        timestamp: new Date().toISOString(),
+        equipmentId: equipment?.id || `new-${Date.now()}`,
+        openRequests: openRequests.length,
+        equipmentStatus: equipment?.status || "new",
+        equipmentHealth: equipment?.health || 100,
+        // Add a message field as shown in Formspree example
+        message: equipment 
+          ? `Equipment update for: ${formData.name}\n\nCategory: ${formData.category}\nSerial: ${formData.serialNumber}\nAssigned to: ${formData.employee}`
+          : `New equipment added: ${formData.name}\n\nCategory: ${formData.category}\nSerial: ${formData.serialNumber}\nAssigned to: ${formData.employee}`
       };
-      addEquipment(newEquipment);
+
+      console.log("Submitting to Formspree:", formspreeData);
+
+      // Submit to Formspree using POST method
+      const response = await fetch(FORMSPREE_ENDPOINT, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify(formspreeData),
+      });
+
+      console.log("Formspree response:", response);
+
+      if (response.ok) {
+        setSubmitSuccess(true);
+        
+        // Add equipment to local context after successful Formspree submission
+        if (!equipment) {
+          const newEquipment: Equipment = {
+            id: `eq-${Date.now()}`,
+            name: formData.name,
+            category: formData.category,
+            serialNumber: formData.serialNumber,
+            company: formData.company,
+            employee: formData.employee,
+            technician: formData.technician,
+            maintenanceTeam: formData.maintenanceTeam,
+            assignedDate: formData.assignedDate,
+            description: formData.description,
+            health: 100,
+            status: 'operational',
+            openRequests: 0
+          };
+          addEquipment(newEquipment);
+        }
+        
+        // Show success message for 3 seconds before closing
+        setTimeout(() => {
+          setSubmitSuccess(false);
+          onClose();
+        }, 3000);
+      } else {
+        const errorText = await response.text();
+        console.error("Formspree error response:", errorText);
+        throw new Error(`Form submission failed: ${response.status} - ${errorText}`);
+      }
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      setSubmitError(error instanceof Error ? error.message : "Failed to submit form. Please try again.");
+      
+      // Still add to local context even if Formspree fails
+      if (!equipment) {
+        const newEquipment: Equipment = {
+          id: `eq-${Date.now()}`,
+          name: formData.name,
+          category: formData.category,
+          serialNumber: formData.serialNumber,
+          company: formData.company,
+          employee: formData.employee,
+          technician: formData.technician,
+          maintenanceTeam: formData.maintenanceTeam,
+          assignedDate: formData.assignedDate,
+          description: formData.description,
+          health: 100,
+          status: 'operational',
+          openRequests: 0
+        };
+        addEquipment(newEquipment);
+        
+        // Don't close immediately on error, let user see the error message
+        // onClose();
+      }
+    } finally {
+      setIsSubmitting(false);
     }
-    onClose();
   };
 
   const handleViewMaintenance = () => {
@@ -98,6 +192,46 @@ export function EquipmentForm({ equipment, onClose }: EquipmentFormProps) {
       onSubmit={handleSubmit}
       className="space-y-6"
     >
+      {/* Success Message */}
+      {submitSuccess && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-lg bg-success/20 border border-success/30 p-4"
+        >
+          <div className="flex items-center gap-2 text-success">
+            <CheckCircle className="h-5 w-5" />
+            <span className="font-medium">Success!</span>
+          </div>
+          <p className="text-sm text-success-foreground mt-1">
+            {equipment 
+              ? "Equipment update submitted successfully! Check shah123aarav@gmail.com for confirmation."
+              : "New equipment added and submitted successfully! Check shah123aarav@gmail.com for confirmation."
+            }
+          </p>
+        </motion.div>
+      )}
+
+      {/* Error Message */}
+      {submitError && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-lg bg-destructive/20 border border-destructive/30 p-4"
+        >
+          <div className="flex items-center gap-2 text-destructive">
+            <AlertTriangle className="h-5 w-5" />
+            <span className="font-medium">Submission Error</span>
+          </div>
+          <p className="text-sm text-destructive-foreground mt-1">
+            {submitError}
+          </p>
+          <p className="text-xs text-muted-foreground mt-2">
+            Note: Formspree requires email verification. Check your email shah123aarav@gmail.com for a confirmation link.
+          </p>
+        </motion.div>
+      )}
+
       {/* Equipment Health (View Mode) */}
       {equipment && (
         <div className="rounded-lg bg-muted/50 p-4 space-y-3">
@@ -192,24 +326,53 @@ export function EquipmentForm({ equipment, onClose }: EquipmentFormProps) {
         </motion.button>
       )}
 
+      {/* Email Field (Hidden since we're using your email) */}
+      <div className="hidden">
+        <Label htmlFor="email">Email</Label>
+        <Input
+          id="email"
+          type="email"
+          value={formData.email}
+          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+          placeholder="Your email"
+          required
+        />
+      </div>
+
+      {/* Email Info Box */}
+      <div className="rounded-lg bg-blue-50 border border-blue-200 p-4">
+        <div className="flex items-center gap-2 text-blue-700 mb-2">
+          <Mail className="h-5 w-5" />
+          <span className="font-medium">Form Submission Info</span>
+        </div>
+        <p className="text-sm text-blue-600">
+          Submissions will be sent to: <strong>shah123aarav@gmail.com</strong>
+        </p>
+        <p className="text-xs text-blue-500 mt-1">
+          Check your email for Formspree verification link if you haven't confirmed yet.
+        </p>
+      </div>
+
       {/* Basic Info */}
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="name">Equipment Name</Label>
+          <Label htmlFor="name">Equipment Name *</Label>
           <Input
             id="name"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             placeholder="Enter equipment name"
+            required
           />
         </div>
         <div className="space-y-2">
-          <Label>Category</Label>
+          <Label>Category *</Label>
           <Select
             value={formData.category}
             onValueChange={(value) =>
               setFormData({ ...formData, category: value })
             }
+            required
           >
             <SelectTrigger>
               <SelectValue placeholder="Select category" />
@@ -335,14 +498,50 @@ export function EquipmentForm({ equipment, onClose }: EquipmentFormProps) {
         />
       </div>
 
+      {/* Submission Info */}
+      <div className="rounded-lg bg-muted/30 p-4">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Send className="h-4 w-4" />
+          <span>
+            {equipment 
+              ? "This equipment update will be submitted to your Formspree endpoint (shah123aarav@gmail.com)."
+              : "This new equipment will be submitted to your Formspree endpoint (shah123aarav@gmail.com)."
+            }
+          </span>
+        </div>
+      </div>
+
       {/* Actions */}
       <div className="flex justify-end gap-3">
-        <Button type="button" variant="outline" onClick={onClose}>
+        <Button 
+          type="button" 
+          variant="outline" 
+          onClick={onClose}
+          disabled={isSubmitting}
+        >
           Cancel
         </Button>
-        <Button type="submit" variant="hero">
-          {equipment ? "Save Changes" : "Add Equipment"}
-          <ChevronRight className="h-4 w-4 ml-1" />
+        <Button 
+          type="submit" 
+          variant="hero"
+          disabled={isSubmitting || submitSuccess}
+        >
+          {isSubmitting ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Submitting...
+            </>
+          ) : submitSuccess ? (
+            <>
+              <CheckCircle className="h-4 w-4 mr-2" />
+              Submitted!
+            </>
+          ) : (
+            <>
+              {equipment ? "Save Changes" : "Add Equipment"}
+              <Send className="h-4 w-4 ml-1" />
+            </>
+          )}
         </Button>
       </div>
     </motion.form>

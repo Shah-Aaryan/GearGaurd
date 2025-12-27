@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Equipment, mockTeams } from "@/data/mockData";
+import { useMaintenanceRequests } from "@/context/MaintenanceContext";
 import { Wrench, ChevronRight, AlertTriangle, CheckCircle } from "lucide-react";
 
 interface EquipmentFormProps {
@@ -31,6 +33,8 @@ const categories = [
 ];
 
 export function EquipmentForm({ equipment, onClose }: EquipmentFormProps) {
+  const navigate = useNavigate();
+  const { requests } = useMaintenanceRequests();
   const [formData, setFormData] = useState({
     name: equipment?.name || "",
     category: equipment?.category || "",
@@ -43,9 +47,27 @@ export function EquipmentForm({ equipment, onClose }: EquipmentFormProps) {
     description: equipment?.description || "",
   });
 
+  // Get open requests for this equipment from context
+  const getOpenRequestsForEquipment = () => {
+    if (!equipment?.name) return [];
+    return requests.filter(
+      (req) => req.equipment === equipment.name && req.stage !== "repaired" && req.stage !== "scrap"
+    );
+  };
+
+  const openRequests = getOpenRequestsForEquipment();
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onClose();
+  };
+
+  const handleViewMaintenance = () => {
+    if (equipment?.name) {
+      onClose();
+      // Navigate to maintenance page with equipment filter
+      navigate(`/app/maintenance?equipment=${encodeURIComponent(equipment.name)}`);
+    }
   };
 
   return (
@@ -92,30 +114,60 @@ export function EquipmentForm({ equipment, onClose }: EquipmentFormProps) {
                 Critical
               </Badge>
             )}
+            {equipment.status === "scrapped" && (
+              <Badge className="bg-muted-foreground/20 text-muted-foreground">
+                <AlertTriangle className="h-3 w-3 mr-1" />
+                Scrapped
+              </Badge>
+            )}
           </div>
+          
+          {/* Scrap Info */}
+          {equipment.isScrapped && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-3 p-3 rounded-lg bg-destructive/10 border border-destructive/20"
+            >
+              <div className="text-sm font-medium text-destructive mb-1">Equipment Scrapped</div>
+              {equipment.scrapDate && (
+                <div className="text-xs text-muted-foreground mb-1">
+                  Date: {new Date(equipment.scrapDate).toLocaleDateString()}
+                </div>
+              )}
+              {equipment.scrapReason && (
+                <div className="text-xs text-muted-foreground">
+                  Reason: {equipment.scrapReason}
+                </div>
+              )}
+            </motion.div>
+          )}
         </div>
       )}
 
-      {/* Smart Button */}
-      {equipment && equipment.openRequests > 0 && (
+      {/* Smart Button - Maintenance Requests */}
+      {equipment && openRequests.length > 0 && (
         <motion.button
           type="button"
+          onClick={handleViewMaintenance}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           className="w-full flex items-center justify-between p-4 rounded-lg border-2 border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors"
         >
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg gradient-primary flex items-center justify-center">
-              <Wrench className="h-5 w-5 text-primary-foreground" />
+            <div className="h-10 w-10 rounded-lg bg-primary/20 flex items-center justify-center">
+              <Wrench className="h-5 w-5 text-primary" />
             </div>
             <div className="text-left">
               <div className="font-medium">Maintenance Requests</div>
               <div className="text-sm text-muted-foreground">
-                View open requests for this equipment
+                {openRequests.length} open request{openRequests.length !== 1 ? "s" : ""} for this equipment
               </div>
             </div>
           </div>
-          <Badge className="text-lg px-3">{equipment.openRequests}</Badge>
+          <Badge variant="secondary" className="text-lg px-3 py-1">
+            {openRequests.length}
+          </Badge>
         </motion.button>
       )}
 

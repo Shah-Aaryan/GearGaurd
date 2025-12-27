@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Navbar } from "./Navbar";
 import { Sidebar } from "./Sidebar";
@@ -25,19 +25,22 @@ export function AppLayout() {
           onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
         />
         
-        <motion.main
+        <main
           className={cn(
             "flex-1 min-h-[calc(100vh-4rem)] transition-all duration-300",
             sidebarCollapsed ? "lg:ml-16" : "lg:ml-0"
           )}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.3 }}
         >
-          <div className="container py-6">
+          <motion.div
+            key={location.pathname}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3 }}
+            className="container py-6"
+          >
             <Outlet />
-          </div>
-        </motion.main>
+          </motion.div>
+        </main>
       </div>
 
       <Chatbot />

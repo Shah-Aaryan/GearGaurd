@@ -12,8 +12,11 @@ export interface Equipment {
   assignedDate: string;
   description: string;
   health: number;
-  status: 'operational' | 'maintenance' | 'critical';
+  status: 'operational' | 'maintenance' | 'critical' | 'scrapped';
   openRequests: number;
+  isScrapped?: boolean;
+  scrapDate?: string;
+  scrapReason?: string;
 }
 
 export interface MaintenanceRequest {

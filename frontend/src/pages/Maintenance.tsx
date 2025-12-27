@@ -1,12 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   DndContext,
   DragOverlay,
-  closestCorners,
+  closestCenter,
   useSensor,
   useSensors,
   PointerSensor,
+  KeyboardSensor,
   DragStartEvent,
   DragEndEvent,
 } from "@dnd-kit/core";
@@ -16,13 +18,15 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Plus, Filter, Search, GripVertical, Clock, AlertTriangle } from "lucide-react";
+import { Plus, Filter, Search, GripVertical, Clock, AlertTriangle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { mockMaintenanceRequests, MaintenanceRequest } from "@/data/mockData";
+import { MaintenanceRequest, mockEquipment } from "@/data/mockData";
+import { useMaintenanceRequests } from "@/context/MaintenanceContext";
+import { useEquipment } from "@/context/EquipmentContext";
 import {
   Dialog,
   DialogContent,
@@ -149,23 +153,25 @@ function KanbanColumn({
   requests: MaintenanceRequest[];
   onCardClick: (request: MaintenanceRequest) => void;
 }) {
+  const { setNodeRef } = useSortable({ id: stage.id });
+
   return (
-    <div className="flex flex-col min-w-[300px] max-w-[350px] flex-1">
-      <div className={`flex items-center justify-between p-4 rounded-t-xl bg-card border border-b-0 ${stage.color} border-l-4`}>
+    <div ref={setNodeRef} className="flex flex-col min-w-[300px] max-w-[350px] flex-1 bg-card rounded-lg border">
+      <div className={`flex items-center justify-between p-4 rounded-t-lg bg-muted ${stage.color} border-l-4`}>
         <div className="flex items-center gap-2">
-          <h3 className="font-semibold">{stage.label}</h3>
-          <Badge variant="secondary" className="rounded-full">
+          <h3 className="font-semibold text-sm">{stage.label}</h3>
+          <Badge variant="secondary" className="rounded-full h-6 w-6 flex items-center justify-center p-0">
             {requests.length}
           </Badge>
         </div>
       </div>
       
-      <div className="flex-1 bg-muted/30 rounded-b-xl border border-t-0 p-3 space-y-3 min-h-[400px]">
+      <div className="flex-1 p-3 space-y-3 min-h-[500px] overflow-y-auto">
         <SortableContext
           items={requests.map((r) => r.id)}
           strategy={verticalListSortingStrategy}
         >
-          <AnimatePresence>
+          <AnimatePresence mode="popLayout">
             {requests.map((request) => (
               <KanbanCard
                 key={request.id}
@@ -177,8 +183,8 @@ function KanbanColumn({
         </SortableContext>
         
         {requests.length === 0 && (
-          <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
-            No requests
+          <div className="flex items-center justify-center h-32 text-muted-foreground text-xs">
+            No requests in {stage.label}
           </div>
         )}
       </div>
@@ -187,25 +193,42 @@ function KanbanColumn({
 }
 
 export default function Maintenance() {
-  const [requests, setRequests] = useState(mockMaintenanceRequests);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { requests, updateRequest } = useMaintenanceRequests();
+  const { equipment, updateEquipment } = useEquipment();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [selectedRequest, setSelectedRequest] = useState<MaintenanceRequest | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [filterEquipment, setFilterEquipment] = useState<string | null>(null);
+
+  // Get equipment filter from URL on mount
+  useEffect(() => {
+    const equipmentParam = searchParams.get("equipment");
+    if (equipmentParam) {
+      setFilterEquipment(decodeURIComponent(equipmentParam));
+    }
+  }, [searchParams]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
         distance: 8,
       },
-    })
+    }),
+    useSensor(KeyboardSensor)
   );
 
-  const filteredRequests = requests.filter((r) =>
-    r.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    r.technician.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    r.equipment?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredRequests = requests.filter((r) => {
+    const matchesSearch =
+      r.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      r.technician.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      r.equipment?.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesEquipment = !filterEquipment || r.equipment === filterEquipment;
+
+    return matchesSearch && matchesEquipment;
+  });
 
   const getRequestsByStage = (stage: Stage) =>
     filteredRequests.filter((r) => r.stage === stage);
@@ -223,14 +246,56 @@ export default function Maintenance() {
     const activeRequest = requests.find((r) => r.id === active.id);
     if (!activeRequest) return;
 
-    // Find which column the item was dropped into
-    const overRequest = requests.find((r) => r.id === over.id);
-    if (overRequest && activeRequest.stage !== overRequest.stage) {
-      setRequests((prev) =>
-        prev.map((r) =>
-          r.id === active.id ? { ...r, stage: overRequest.stage } : r
-        )
-      );
+    // The over ID should be a stage ID
+    const newStageId = over.id as string;
+    const isValidStage = stages.some((s) => s.id === newStageId);
+    
+    if (!isValidStage) return;
+
+    const newStage = newStageId as Stage;
+    
+    if (activeRequest.stage !== newStage) {
+      // Update request stage using context
+      updateRequest(active.id as string, { stage: newStage });
+
+      // SCRAP LOGIC: Check if ALL requests for this equipment should be scrapped
+      if (activeRequest.equipment) {
+        // Get all requests for this equipment (after the update)
+        const updatedRequests = requests.map((r) =>
+          r.id === active.id ? { ...r, stage: newStage } : r
+        );
+        const equipmentRequests = updatedRequests.filter(
+          (r) => r.equipment === activeRequest.equipment
+        );
+        
+        // Equipment is scrapped only if ALL its requests are in scrap stage
+        const allInScrap = equipmentRequests.length > 0 && 
+          equipmentRequests.every((r) => r.stage === "scrap");
+
+        const equipmentToUpdate = equipment.find(
+          (eq) => eq.name === activeRequest.equipment
+        );
+        
+        if (equipmentToUpdate && equipmentToUpdate.id) {
+          if (allInScrap) {
+            // Mark as scrapped only if all requests are in scrap
+            updateEquipment(equipmentToUpdate.id, {
+              status: "scrapped" as const,
+              isScrapped: true,
+              scrapDate: new Date().toISOString().split("T")[0],
+              scrapReason: `Equipment scrapped due to maintenance request: ${activeRequest.subject}`,
+            });
+          } else if (equipmentToUpdate.isScrapped) {
+            // Un-scrap if at least one request is moved out of scrap
+            updateEquipment(equipmentToUpdate.id, {
+              status: "operational" as const,
+              isScrapped: false,
+              scrapDate: undefined,
+              scrapReason: undefined,
+            });
+          }
+        }
+      }
     }
   };
 
@@ -249,7 +314,7 @@ export default function Maintenance() {
         <div>
           <h1 className="text-3xl font-bold">Maintenance Requests</h1>
           <p className="text-muted-foreground">
-            Drag and drop to update request status
+            {filterEquipment ? `Requests for ${filterEquipment}` : "Drag and drop to update request status"}
           </p>
         </div>
         <Button onClick={() => setShowForm(true)} variant="hero">
@@ -257,6 +322,29 @@ export default function Maintenance() {
           New Request
         </Button>
       </div>
+
+      {/* Active Equipment Filter Badge */}
+      {filterEquipment && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center gap-2 p-3 bg-primary/10 rounded-lg border border-primary/20"
+        >
+          <Badge variant="secondary">Filtered by: {filterEquipment}</Badge>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              setFilterEquipment(null);
+              setSearchParams({});
+            }}
+            className="h-6 px-2"
+          >
+            <X className="h-4 w-4" />
+            Clear filter
+          </Button>
+        </motion.div>
+      )}
 
       {/* Search & Filter */}
       <div className="flex gap-4">
@@ -278,20 +366,25 @@ export default function Maintenance() {
       {/* Kanban Board */}
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCorners}
+        collisionDetection={closestCenter}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="flex gap-4 overflow-x-auto pb-4">
-          {stages.map((stage) => (
-            <KanbanColumn
-              key={stage.id}
-              stage={stage}
-              requests={getRequestsByStage(stage.id)}
-              onCardClick={setSelectedRequest}
-            />
-          ))}
-        </div>
+        <SortableContext
+          items={[...stages.map((s) => s.id), ...filteredRequests.map((r) => r.id)]}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className="flex gap-4 overflow-x-auto pb-4">
+            {stages.map((stage) => (
+              <KanbanColumn
+                key={stage.id}
+                stage={stage}
+                requests={getRequestsByStage(stage.id)}
+                onCardClick={setSelectedRequest}
+              />
+            ))}
+          </div>
+        </SortableContext>
 
         <DragOverlay>
           {activeRequest ? (

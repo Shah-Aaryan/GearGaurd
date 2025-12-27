@@ -15,15 +15,18 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { MaintenanceRequest, mockEquipment, mockTeams, mockWorkCenters } from "@/data/mockData";
 import { Check, ChevronRight } from "lucide-react";
+import { useMaintenanceRequests } from "@/context/MaintenanceContext";
 
 interface MaintenanceFormProps {
   request?: MaintenanceRequest;
   onClose: () => void;
+  selectedDate?: Date;
 }
 
 const stages = ["new", "in-progress", "repaired", "scrap"];
 
-export function MaintenanceForm({ request, onClose }: MaintenanceFormProps) {
+export function MaintenanceForm({ request, onClose, selectedDate }: MaintenanceFormProps) {
+  const { addRequest } = useMaintenanceRequests();
   const [formData, setFormData] = useState({
     subject: request?.subject || "",
     type: request?.type || "corrective",
@@ -32,7 +35,7 @@ export function MaintenanceForm({ request, onClose }: MaintenanceFormProps) {
     category: request?.category || "",
     maintenanceTeam: request?.maintenanceTeam || "",
     technician: request?.technician || "",
-    scheduledDate: request?.scheduledDate || "",
+    scheduledDate: request?.scheduledDate || (selectedDate ? selectedDate.toISOString().split('T')[0] : ""),
     duration: request?.duration || "",
     priority: request?.priority || "medium",
     notes: request?.notes || "",
@@ -46,7 +49,33 @@ export function MaintenanceForm({ request, onClose }: MaintenanceFormProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Mock save
+    
+    if (!request) {
+      // Create new request
+      const newRequest: MaintenanceRequest = {
+        id: `REQ-${Date.now()}`,
+        subject: formData.subject,
+        type: formData.type as any,
+        equipment: formData.equipment,
+        category: formData.category,
+        maintenanceTeam: formData.maintenanceTeam,
+        technician: formData.technician,
+        technicianAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=" + formData.technician,
+        scheduledDate: formData.scheduledDate,
+        duration: formData.duration,
+        priority: formData.priority as any,
+        stage: "new" as const,
+        employee: "",
+        company: "",
+        notes: formData.notes,
+        instructions: formData.instructions,
+        isOverdue: false,
+        workCenter: formData.workCenter,
+      };
+      
+      addRequest(newRequest);
+    }
+    
     onClose();
   };
 

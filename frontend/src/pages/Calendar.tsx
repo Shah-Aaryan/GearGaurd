@@ -365,7 +365,7 @@ export default function Calendar() {
 
       {/* New Maintenance Dialog */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>
               {selectedDate
@@ -373,7 +373,9 @@ export default function Calendar() {
                 : "Schedule Maintenance"}
             </DialogTitle>
           </DialogHeader>
-          <MaintenanceForm onClose={() => setShowForm(false)} />
+          <div className="overflow-y-auto max-h-[calc(90vh-120px)] pr-4">
+            <MaintenanceForm onClose={() => setShowForm(false)} selectedDate={selectedDate || undefined} />
+          </div>
         </DialogContent>
       </Dialog>
     </motion.div>

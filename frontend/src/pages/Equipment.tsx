@@ -28,7 +28,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { mockEquipment, Equipment } from "@/data/mockData";
+import { Equipment } from "@/data/mockData";
+import { useEquipment } from "@/context/EquipmentContext";
 import { EquipmentForm } from "@/components/equipment/EquipmentForm";
 
 const containerVariants = {
@@ -66,13 +67,15 @@ function getStatusIcon(status: string) {
       return <Wrench className="h-4 w-4 text-warning" />;
     case "critical":
       return <AlertTriangle className="h-4 w-4 text-destructive" />;
+    case "scrapped":
+      return <AlertTriangle className="h-4 w-4 text-muted-foreground" />;
     default:
       return null;
   }
 }
 
 export default function EquipmentPage() {
-  const [equipment, setEquipment] = useState(mockEquipment);
+  const { equipment } = useEquipment();
   const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");

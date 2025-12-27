@@ -1,13 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
 import {
   DndContext,
   DragOverlay,
-  closestCorners,
+  closestCenter,
   useSensor,
   useSensors,
   PointerSensor,
+  KeyboardSensor,
   DragStartEvent,
   DragEndEvent,
 } from "@dnd-kit/core";
@@ -27,6 +29,7 @@ import {
   GripVertical,
   Clock,
   AlertTriangle,
+  X,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -38,7 +41,10 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
   mockMaintenanceRequests,
   MaintenanceRequest,
+  mockEquipment,
 } from "@/data/mockData";
+import { useMaintenanceRequests } from "@/context/MaintenanceContext";
+import { useEquipment } from "@/context/EquipmentContext";
 
 import {
   Dialog,
@@ -220,8 +226,11 @@ function KanbanColumn({
 /* ────────────────────────────────────────────── */
 
 export default function Maintenance() {
-  const [requests, setRequests] = useState(mockMaintenanceRequests);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { requests, updateRequest } = useMaintenanceRequests();
+  const { equipment, updateEquipment } = useEquipment();
   const [searchQuery, setSearchQuery] = useState("");
+  const [filterEquipment, setFilterEquipment] = useState<string | null>(null);
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [selectedRequest, setSelectedRequest] =
@@ -229,16 +238,29 @@ export default function Maintenance() {
 
   const [showForm, setShowForm] = useState(false);
 
+  // Get equipment filter from URL on mount
+  useEffect(() => {
+    const equipmentParam = searchParams.get("equipment");
+    if (equipmentParam) {
+      setFilterEquipment(decodeURIComponent(equipmentParam));
+    }
+  }, [searchParams]);
+
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor)
   );
 
   /* FILTER ONLY IN KANBAN SEARCH BAR */
-  const filteredRequests = requests.filter(r =>
-    r.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    r.technician.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    r.equipment?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredRequests = requests.filter(r => {
+    const matchesSearch = r.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      r.technician.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      r.equipment?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesEquipment = !filterEquipment || r.equipment === filterEquipment;
+    
+    return matchesSearch && matchesEquipment;
+  });
 
   const getRequestsByStage = (stage: Stage) =>
     filteredRequests.filter(r => r.stage === stage);
@@ -259,11 +281,49 @@ export default function Maintenance() {
 
     if (!activeReq || !overReq || activeReq.stage === overReq.stage) return;
 
-    setRequests(prev =>
-      prev.map(r =>
-        r.id === active.id ? { ...r, stage: overReq.stage } : r
-      )
-    );
+    const newStage = overReq.stage;
+    
+    // Update request stage using context
+    updateRequest(active.id as string, { stage: newStage });
+
+    // SCRAP LOGIC: Check if ALL requests for this equipment should be scrapped
+    if (activeReq.equipment) {
+      // Get all requests for this equipment (after the update)
+      const updatedRequests = requests.map((r) =>
+        r.id === active.id ? { ...r, stage: newStage } : r
+      );
+      const equipmentRequests = updatedRequests.filter(
+        (r) => r.equipment === activeReq.equipment
+      );
+      
+      // Equipment is scrapped only if ALL its requests are in scrap stage
+      const allInScrap = equipmentRequests.length > 0 && 
+        equipmentRequests.every((r) => r.stage === "scrap");
+
+      const equipmentToUpdate = equipment.find(
+        (eq) => eq.name === activeReq.equipment
+      );
+      
+      if (equipmentToUpdate && equipmentToUpdate.id) {
+        if (allInScrap) {
+          // Mark as scrapped only if all requests are in scrap
+          updateEquipment(equipmentToUpdate.id, {
+            status: "scrapped" as const,
+            isScrapped: true,
+            scrapDate: new Date().toISOString().split("T")[0],
+            scrapReason: `Equipment scrapped due to maintenance request: ${activeReq.subject}`,
+          });
+        } else if (equipmentToUpdate.isScrapped) {
+          // Un-scrap if at least one request is moved out of scrap
+          updateEquipment(equipmentToUpdate.id, {
+            status: "operational" as const,
+            isScrapped: false,
+            scrapDate: undefined,
+            scrapReason: undefined,
+          });
+        }
+      }
+    }
   };
 
   const activeRequest = activeId
@@ -309,7 +369,7 @@ export default function Maintenance() {
       {/* Kanban Board */}
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCorners}
+        collisionDetection={closestCenter}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >

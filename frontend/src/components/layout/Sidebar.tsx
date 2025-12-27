@@ -60,7 +60,7 @@ export function Sidebar({ isOpen, onClose, isCollapsed = false, onToggleCollapse
         variants={sidebarVariants}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
         className={cn(
-          "fixed left-0 top-16 z-50 h-[calc(100vh-4rem)] border-r bg-sidebar lg:static lg:translate-x-0",
+          "fixed left-0 top-16 z-50 h-[calc(100vh-4rem)] border-r bg-sidebar lg:static lg:z-0 lg:translate-x-0 lg:opacity-100",
           isCollapsed ? "w-16" : "w-64"
         )}
       >
@@ -78,7 +78,12 @@ export function Sidebar({ isOpen, onClose, isCollapsed = false, onToggleCollapse
                 >
                   <NavLink
                     to={item.path}
-                    onClick={onClose}
+                    onClick={() => {
+                      // Only close sidebar on mobile
+                      if (window.innerWidth < 1024) {
+                        onClose?.();
+                      }
+                    }}
                     className={cn(
                       "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
                       isActive

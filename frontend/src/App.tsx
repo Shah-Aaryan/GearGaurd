@@ -4,6 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/hooks/useTheme";
+import { MaintenanceProvider } from "@/context/MaintenanceContext";
+import { EquipmentProvider } from "@/context/EquipmentContext";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -23,25 +25,29 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
       <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Landing />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/app" element={<AppLayout />}>
-              <Route path="dashboard" element={<Dashboard />} />
-              <Route path="maintenance" element={<Maintenance />} />
-              <Route path="calendar" element={<Calendar />} />
-              <Route path="equipment" element={<Equipment />} />
-              <Route path="teams" element={<Teams />} />
-              <Route path="work-centers" element={<WorkCenters />} />
-              <Route path="reporting" element={<Reporting />} />
-            </Route>
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+        <MaintenanceProvider>
+          <EquipmentProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Landing />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Signup />} />
+                <Route path="/app" element={<AppLayout />}>
+                  <Route path="dashboard" element={<Dashboard />} />
+                  <Route path="maintenance" element={<Maintenance />} />
+                  <Route path="calendar" element={<Calendar />} />
+                  <Route path="equipment" element={<Equipment />} />
+                  <Route path="teams" element={<Teams />} />
+                  <Route path="work-centers" element={<WorkCenters />} />
+                  <Route path="reporting" element={<Reporting />} />
+                </Route>
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </EquipmentProvider>
+        </MaintenanceProvider>
       </TooltipProvider>
     </ThemeProvider>
   </QueryClientProvider>

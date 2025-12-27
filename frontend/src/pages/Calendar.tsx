@@ -264,7 +264,7 @@ export default function Calendar() {
               <div className="flex-1">
                 <h4 className="font-medium">{req.subject}</h4>
                 <p className="text-sm text-muted-foreground">
-                  {req.equipment} ΓÇó {req.technician}
+                  {req.equipment} • {req.technician}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
                   Scheduled: {format(parseISO(req.scheduledDate), "MMM d, yyyy")}

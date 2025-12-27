@@ -1,14 +1,39 @@
 import { useState } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Navbar } from "./Navbar";
 import { Sidebar } from "./Sidebar";
 import { Chatbot } from "@/components/shared/Chatbot";
 import { cn } from "@/lib/utils";
+import {
+  LayoutDashboard,
+  Wrench,
+  Calendar,
+  Settings2,
+  Users,
+  BarChart3,
+  Factory,
+  Search,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+
+const menuItems = [
+  { icon: LayoutDashboard, label: "Dashboard", path: "/app/dashboard" },
+  { icon: Wrench, label: "Maintenance", path: "/app/maintenance" },
+  { icon: Calendar, label: "Calendar", path: "/app/calendar" },
+  { icon: Settings2, label: "Equipment", path: "/app/equipment" },
+  { icon: Users, label: "Teams", path: "/app/teams" },
+  { icon: Factory, label: "Work Centers", path: "/app/work-centers" },
+  { icon: BarChart3, label: "Reporting", path: "/app/reporting" },
+];
 
 export function AppLayout() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(false);
 
   return (
     <div className="min-h-screen bg-background">

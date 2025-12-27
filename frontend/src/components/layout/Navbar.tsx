@@ -1,8 +1,7 @@
-import { useState } from "react";
+import { ReactNode } from "react";
 import { motion } from "framer-motion";
-import { Search, Bell, Moon, Sun, MessageCircle, User, Settings, LogOut, Menu } from "lucide-react";
+import { Bell, Moon, Sun, User, Settings, LogOut, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,11 +15,11 @@ import { useTheme } from "@/hooks/useTheme";
 interface NavbarProps {
   onMenuClick?: () => void;
   showMenuButton?: boolean;
+  children?: ReactNode;
 }
 
-export function Navbar({ onMenuClick, showMenuButton = false }: NavbarProps) {
+export function Navbar({ onMenuClick, showMenuButton = false, children }: NavbarProps) {
   const { theme, toggleTheme } = useTheme();
-  const [searchFocused, setSearchFocused] = useState(false);
 
   return (
     <motion.header
@@ -41,7 +40,6 @@ export function Navbar({ onMenuClick, showMenuButton = false }: NavbarProps) {
               <Menu className="h-5 w-5" />
             </Button>
           )}
-          
           {/* Logo */}
           <motion.div
             className="flex items-center gap-2"
@@ -55,23 +53,7 @@ export function Navbar({ onMenuClick, showMenuButton = false }: NavbarProps) {
               <span className="text-secondary">Guard</span>
             </span>
           </motion.div>
-        </div>
-
-        {/* Center - Search */}
-        <div className="hidden md:flex flex-1 max-w-md mx-8">
-          <motion.div
-            className="relative w-full"
-            animate={{ scale: searchFocused ? 1.02 : 1 }}
-            transition={{ duration: 0.2 }}
-          >
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search equipment, requests, teams..."
-              className="pl-10 bg-muted/50"
-              onFocus={() => setSearchFocused(true)}
-              onBlur={() => setSearchFocused(false)}
-            />
-          </motion.div>
+          {children}
         </div>
 
         {/* Right Section */}

@@ -54,18 +54,7 @@ export function AppLayout() {
           })}
         </nav>
       </Navbar>
-      {/* Search bar below navbar */}
-      <div className="w-full flex justify-center bg-background border-b px-4 py-3">
-        <div className="relative w-full max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search equipment, requests, teams..."
-            className="pl-10 bg-muted/50"
-            onFocus={() => setSearchFocused(true)}
-            onBlur={() => setSearchFocused(false)}
-          />
-        </div>
-      </div>
+      {/* Global search bar removed as per user request */}
       <motion.main
         className="flex-1 min-h-[calc(100vh-4rem)] transition-all duration-300"
         initial={{ opacity: 0 }}

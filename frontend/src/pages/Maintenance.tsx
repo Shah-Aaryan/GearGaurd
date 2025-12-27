@@ -1,6 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 import {
   DndContext,
@@ -32,6 +34,8 @@ import {
   FileText,
   MessageSquare,
   Send,
+  Save,
+  Download,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -86,6 +90,13 @@ type WorksheetComment = {
   requestId: string;
 };
 
+// Local storage keys
+const LOCAL_STORAGE_KEYS = {
+  WORKSHEET_COMMENTS: 'maintenance-worksheet-comments',
+  REQUESTS_BACKUP: 'maintenance-requests-backup',
+  MAINTENANCE_REQUESTS: 'maintenance-requests-data'
+};
+
 /* ────────────────────────────────────────────── */
 /* WORKSHEET COMPONENT */
 /* ────────────────────────────────────────────── */
@@ -99,27 +110,61 @@ function WorksheetSheet({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const [comments, setComments] = useState<WorksheetComment[]>([
-    {
-      id: "1",
-      text: "Initial diagnosis complete. Need replacement parts.",
-      author: "John Technician",
-      timestamp: "2024-01-15 10:30",
-      requestId: request.id,
-    },
-    {
-      id: "2",
-      text: "Parts ordered. Expected delivery in 2 days.",
-      author: "Sarah Manager",
-      timestamp: "2024-01-15 14:45",
-      requestId: request.id,
-    },
-  ]);
-  
+  const [comments, setComments] = useState<WorksheetComment[]>([]);
   const [newComment, setNewComment] = useState("");
+  const commentsEndRef = useRef<HTMLDivElement>(null);
+
+  // Load comments from localStorage when sheet opens
+  useEffect(() => {
+    if (open && request?.id) {
+      loadComments(request.id);
+    }
+  }, [open, request?.id]);
+
+  // Scroll to bottom when new comments are added
+  useEffect(() => {
+    commentsEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [comments]);
+
+  // Load comments from localStorage
+  const loadComments = (requestId: string) => {
+    try {
+      const savedComments = localStorage.getItem(LOCAL_STORAGE_KEYS.WORKSHEET_COMMENTS);
+      if (savedComments) {
+        const allComments: WorksheetComment[] = JSON.parse(savedComments);
+        const requestComments = allComments.filter(comment => comment.requestId === requestId);
+        setComments(requestComments);
+      } else {
+        setComments([]);
+      }
+    } catch (error) {
+      console.error("Error loading comments:", error);
+      setComments([]);
+    }
+  };
+
+  // Save comments to localStorage
+  const saveCommentsToStorage = (commentsToSave: WorksheetComment[]) => {
+    try {
+      const savedComments = localStorage.getItem(LOCAL_STORAGE_KEYS.WORKSHEET_COMMENTS);
+      let allComments: WorksheetComment[] = [];
+      
+      if (savedComments) {
+        allComments = JSON.parse(savedComments);
+        // Remove existing comments for this request
+        allComments = allComments.filter(comment => comment.requestId !== request.id);
+      }
+      
+      // Add new comments
+      allComments = [...allComments, ...commentsToSave];
+      localStorage.setItem(LOCAL_STORAGE_KEYS.WORKSHEET_COMMENTS, JSON.stringify(allComments));
+    } catch (error) {
+      console.error("Error saving comments:", error);
+    }
+  };
 
   const handleAddComment = () => {
-    if (!newComment.trim()) return;
+    if (!newComment.trim() || !request?.id) return;
     
     const comment: WorksheetComment = {
       id: Date.now().toString(),
@@ -129,15 +174,91 @@ function WorksheetSheet({
       requestId: request.id,
     };
     
-    setComments([...comments, comment]);
+    const updatedComments = [...comments, comment];
+    setComments(updatedComments);
+    saveCommentsToStorage(updatedComments);
     setNewComment("");
+  };
+
+  // Generate PDF for this specific worksheet
+  const handleGenerateWorksheetPDF = () => {
+    const doc = new jsPDF();
+    
+    // Title
+    doc.setFontSize(20);
+    doc.text(`Maintenance Worksheet - ${request.subject}`, 14, 22);
+    
+    doc.setFontSize(10);
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 32);
+    
+    // Request Details
+    doc.setFontSize(12);
+    doc.text("Request Details:", 14, 45);
+    
+    const requestDetails = [
+      ["Equipment:", request.equipment],
+      ["Priority:", request.priority],
+      ["Technician:", request.technician],
+      ["Status:", request.stage],
+      ["Duration:", request.duration],
+      ["Created:", new Date(request.createdAt).toLocaleDateString()],
+    ];
+    
+    autoTable(doc, {
+      startY: 50,
+      head: [['Field', 'Value']],
+      body: requestDetails,
+      theme: 'grid',
+      headStyles: { fillColor: [41, 128, 185] },
+    });
+    
+    // Comments Section
+    let finalY = (doc as any).lastAutoTable.finalY + 20;
+    doc.text("Work Comments:", 14, finalY);
+    finalY += 10;
+    
+    if (comments.length > 0) {
+      const commentRows = comments.map(comment => [
+        comment.timestamp,
+        comment.author,
+        comment.text
+      ]);
+      
+      autoTable(doc, {
+        startY: finalY,
+        head: [['Timestamp', 'Author', 'Comment']],
+        body: commentRows,
+        theme: 'grid',
+        headStyles: { fillColor: [39, 174, 96] },
+        columnStyles: {
+          0: { cellWidth: 40 },
+          1: { cellWidth: 40 },
+          2: { cellWidth: 110 }
+        },
+      });
+    } else {
+      doc.text("No comments added yet.", 14, finalY);
+    }
+    
+    doc.save(`worksheet-${request.id}-${new Date().toISOString().slice(0,10)}.pdf`);
   };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>Worksheet - {request.subject}</SheetTitle>
+          <SheetTitle className="flex items-center justify-between">
+            <span>Worksheet - {request.subject}</span>
+            <Button 
+              onClick={handleGenerateWorksheetPDF} 
+              size="sm" 
+              variant="outline"
+              className="h-8"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              PDF
+            </Button>
+          </SheetTitle>
           <SheetDescription>
             Maintenance request details and work comments
           </SheetDescription>
@@ -166,15 +287,28 @@ function WorksheetSheet({
                 <span className="text-muted-foreground">Status:</span>
                 <p className="font-medium capitalize">{request.stage}</p>
               </div>
+              <div>
+                <span className="text-muted-foreground">Duration:</span>
+                <p className="font-medium">{request.duration}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Created:</span>
+                <p className="font-medium">{new Date(request.createdAt).toLocaleDateString()}</p>
+              </div>
             </div>
           </Card>
 
           {/* Comments Section */}
           <div>
-            <h3 className="font-semibold mb-4 flex items-center gap-2">
-              <MessageSquare className="h-5 w-5" />
-              Work Comments
-            </h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold flex items-center gap-2">
+                <MessageSquare className="h-5 w-5" />
+                Work Comments ({comments.length})
+              </h3>
+              <Badge variant="outline">
+                {comments.length} comment{comments.length !== 1 ? 's' : ''}
+              </Badge>
+            </div>
             
             <div className="space-y-4 mb-6 max-h-[400px] overflow-y-auto pr-2">
               {comments.map((comment) => (
@@ -197,6 +331,13 @@ function WorksheetSheet({
                   </div>
                 </Card>
               ))}
+              
+              {comments.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  No comments yet. Add the first comment below.
+                </div>
+              )}
+              <div ref={commentsEndRef} />
             </div>
 
             {/* Add Comment */}
@@ -206,8 +347,16 @@ function WorksheetSheet({
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
                 className="min-h-[100px]"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && e.ctrlKey) {
+                    handleAddComment();
+                  }
+                }}
               />
-              <div className="flex justify-end">
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-muted-foreground">
+                  Press Ctrl+Enter to submit
+                </span>
                 <Button onClick={handleAddComment} size="sm">
                   <Send className="h-4 w-4 mr-2" />
                   Add Comment
@@ -403,7 +552,7 @@ function KanbanColumn({
 
 export default function Maintenance() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { requests, updateRequest, addRequest } = useMaintenanceRequests();
+  const { requests, updateRequest, addRequest, setRequests } = useMaintenanceRequests();
   const { equipment, updateEquipment } = useEquipment();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterEquipment, setFilterEquipment] = useState<string | null>(null);
@@ -416,6 +565,11 @@ export default function Maintenance() {
 
   const [showForm, setShowForm] = useState(false);
 
+  // Initialize data from localStorage on mount
+  useEffect(() => {
+    loadDataFromStorage();
+  }, []);
+
   // Get equipment filter from URL on mount
   useEffect(() => {
     const equipmentParam = searchParams.get("equipment");
@@ -423,6 +577,26 @@ export default function Maintenance() {
       setFilterEquipment(decodeURIComponent(equipmentParam));
     }
   }, [searchParams]);
+
+  // Load data from localStorage
+  const loadDataFromStorage = () => {
+    try {
+      const savedData = localStorage.getItem(LOCAL_STORAGE_KEYS.MAINTENANCE_REQUESTS);
+      if (savedData) {
+        const parsedData = JSON.parse(savedData);
+        setRequests(parsedData);
+      }
+    } catch (error) {
+      console.error("Error loading data from storage:", error);
+    }
+  };
+
+  // Save data to localStorage whenever requests change
+  useEffect(() => {
+    if (requests.length > 0) {
+      localStorage.setItem(LOCAL_STORAGE_KEYS.MAINTENANCE_REQUESTS, JSON.stringify(requests));
+    }
+  }, [requests]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -443,6 +617,92 @@ export default function Maintenance() {
   const getRequestsByStage = (stage: Stage) =>
     filteredRequests.filter(r => r.stage === stage);
 
+  // Generate PDF report for all data
+  const handleGeneratePDF = () => {
+    const doc = new jsPDF();
+    
+    // Title
+    doc.setFontSize(20);
+    doc.text("Maintenance Requests Report", 14, 22);
+    
+    doc.setFontSize(10);
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 32);
+    doc.text(`Total Requests: ${requests.length}`, 14, 42);
+    
+    // Summary by Stage
+    doc.setFontSize(12);
+    doc.text("Summary by Stage:", 14, 55);
+    
+    const stageSummary = stages.map(stage => {
+      const count = requests.filter(r => r.stage === stage.id).length;
+      return [stage.label, count.toString()];
+    });
+    
+    autoTable(doc, {
+      startY: 60,
+      head: [['Stage', 'Count']],
+      body: stageSummary,
+      theme: 'grid',
+      headStyles: { fillColor: [41, 128, 185] },
+    });
+    
+    // All Requests Table
+    let finalY = (doc as any).lastAutoTable.finalY + 20;
+    doc.text("All Maintenance Requests:", 14, finalY);
+    finalY += 10;
+    
+    const requestRows = requests.map(request => [
+      request.id,
+      request.subject,
+      request.equipment,
+      request.priority,
+      request.stage,
+      request.technician,
+      request.duration,
+      new Date(request.createdAt).toLocaleDateString()
+    ]);
+    
+    autoTable(doc, {
+      startY: finalY,
+      head: [['ID', 'Subject', 'Equipment', 'Priority', 'Stage', 'Technician', 'Duration', 'Created']],
+      body: requestRows,
+      theme: 'grid',
+      headStyles: { fillColor: [39, 174, 96] },
+      columnStyles: {
+        0: { cellWidth: 20 },
+        1: { cellWidth: 40 },
+        2: { cellWidth: 30 },
+        3: { cellWidth: 20 },
+        4: { cellWidth: 25 },
+        5: { cellWidth: 30 },
+        6: { cellWidth: 20 },
+        7: { cellWidth: 25 }
+      },
+      styles: { fontSize: 8 },
+      pageBreak: 'auto',
+      margin: { top: 20 }
+    });
+    
+    doc.save(`maintenance-report-${new Date().toISOString().slice(0,10)}.pdf`);
+  };
+
+  // Save all data to localStorage backup
+  const handleSaveAllData = () => {
+    try {
+      const dataToSave = {
+        requests,
+        equipment,
+        comments: JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.WORKSHEET_COMMENTS) || '[]'),
+        savedAt: new Date().toISOString(),
+      };
+      
+      localStorage.setItem(LOCAL_STORAGE_KEYS.REQUESTS_BACKUP, JSON.stringify(dataToSave));
+      alert("All data backed up successfully!");
+    } catch (error) {
+      console.error("Error saving data:", error);
+      alert("Error saving data!");
+    }
+  };
 
   /* DRAG HANDLERS */
 
@@ -508,7 +768,7 @@ export default function Maintenance() {
     ? requests.find(r => r.id === activeId)
     : null;
 
-  // Handle new request creation
+  // Handle new request creation - will be persisted automatically via useEffect
   const handleNewRequest = (formData: Partial<MaintenanceRequest>) => {
     // Create a complete new request from form data
     const newRequest: MaintenanceRequest = {
@@ -530,7 +790,6 @@ export default function Maintenance() {
       completionDate: formData.completionDate,
       notes: formData.notes || "",
       attachments: formData.attachments || [],
-      // Add any other required fields from your MaintenanceRequest type
     };
     
     console.log("Adding new request:", newRequest);
@@ -553,14 +812,44 @@ export default function Maintenance() {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
 
-      {/* Header */}
+      {/* Header with Worksheet and Save buttons */}
       <div className="flex items-center justify-between py-2">
         <h1 className="text-2xl font-bold">Maintenance Teams</h1>
 
-        <Button onClick={() => setShowForm(true)} variant="hero">
-          <Plus className="h-4 w-4 mr-2" />
-          New Request
-        </Button>
+        <div className="flex gap-2">
+          {/* Worksheet Button - opens worksheet sheet when clicked */}
+          <Button 
+            onClick={() => {
+              // If you want a global worksheet, show a different view
+              // For now, we'll show the first request's worksheet or open a global view
+              if (requests.length > 0) {
+                setWorksheetRequest(requests[0]);
+              } else {
+                alert("No requests available to open worksheet");
+              }
+            }}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <FileText className="h-4 w-4" />
+            Open Worksheet
+          </Button>
+          
+          {/* Save All Data as PDF */}
+          <Button 
+            onClick={handleGeneratePDF}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <Download className="h-4 w-4" />
+            Download PDF
+          </Button>
+          
+          <Button onClick={() => setShowForm(true)} variant="hero">
+            <Plus className="h-4 w-4 mr-2" />
+            New Request
+          </Button>
+        </div>
       </div>
 
 
@@ -577,6 +866,11 @@ export default function Maintenance() {
           />
 
           <Filter className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        </div>
+        
+        {/* Data Info */}
+        <div className="text-sm text-muted-foreground">
+          {requests.length} request{requests.length !== 1 ? 's' : ''} • Auto-saved
         </div>
       </div>
 

@@ -134,6 +134,8 @@ export default function Reporting() {
   // Filters (future: implement real filter logic)
   const [filter, setFilter] = useState({ team: "", equipment: "", type: "", status: "", dateFrom: "", dateTo: "" });
   const [liveRequests, setLiveRequests] = useState(() => [...mockMaintenanceRequests]);
+  const [teamData, setTeamData] = useState<{ name: string; count: number }[]>([]);
+  const [categoryData, setCategoryData] = useState<{ name: string; count: number }[]>([]);
   const wsRef = useRef(null);
 
   // WebSocket simulation: push new data every 2-3 seconds
@@ -144,8 +146,34 @@ export default function Reporting() {
     return () => clearInterval(wsRef.current);
   }, []);
 
+  // Live-updating chart data for Requests per Team and per Equipment Category
+  useEffect(() => {
+    // Simulate WebSocket: update every 2 seconds
+    const interval = setInterval(() => {
+      // Requests per Team
+      const teamMap = new Map<string, number>();
+      liveRequests.forEach(r => {
+        if (!teamMap.has(r.maintenanceTeam)) teamMap.set(r.maintenanceTeam, 0);
+        teamMap.set(r.maintenanceTeam, teamMap.get(r.maintenanceTeam)! + 1);
+      });
+      setTeamData(Array.from(teamMap.entries()).map(([name, count]) => ({ name, count })));
+
+      // Requests per Equipment Category
+      const catMap = new Map<string, number>();
+      liveRequests.forEach(r => {
+        // Find equipment category by equipment name
+        const eq = mockEquipment.find(e => e.name === r.equipment);
+        const cat = eq?.category || "Unknown";
+        if (!catMap.has(cat)) catMap.set(cat, 0);
+        catMap.set(cat, catMap.get(cat)! + 1);
+      });
+      setCategoryData(Array.from(catMap.entries()).map(([name, count]) => ({ name, count })));
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [liveRequests]);
+
   // Date range filter logic
-  const filteredRequests = liveRequests.filter(r => {
+  const filteredRequests = mockMaintenanceRequests.filter(r => {
     const d = parseDate(r.scheduledDate);
     const from = filter.dateFrom ? parseDate(filter.dateFrom) : null;
     const to = filter.dateTo ? parseDate(filter.dateTo) : null;
@@ -238,6 +266,45 @@ export default function Reporting() {
           Filter
         </button>
       </div>
+
+      {/* Live Reports: Requests per Team & Category */}
+      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-2">
+        {/* Requests per Team */}
+        <Card className="rounded-xl shadow-md hover:shadow-lg transition-shadow">
+          <CardHeader><CardTitle>Requests per Team</CardTitle></CardHeader>
+          <CardContent>
+            <div className="h-[250px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={teamData} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={12} allowDecimals={false} />
+                  <YAxis dataKey="name" type="category" stroke="hsl(var(--muted-foreground))" fontSize={12} width={120} />
+                  <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }} />
+                  <Bar dataKey="count" radius={[8, 8, 8, 8]} fill="hsl(var(--primary))" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+        {/* Requests per Equipment Category */}
+        <Card className="rounded-xl shadow-md hover:shadow-lg transition-shadow">
+          <CardHeader><CardTitle>Requests per Equipment Category</CardTitle></CardHeader>
+          <CardContent>
+            <div className="h-[250px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={categoryData} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={12} allowDecimals={false} />
+                  <YAxis dataKey="name" type="category" stroke="hsl(var(--muted-foreground))" fontSize={12} width={120} />
+                  <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }} />
+                  <Bar dataKey="count" radius={[8, 8, 8, 8]} fill="hsl(var(--info))" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
         {/* 1️⃣ Workload Distribution — Requests by Technician */}
         <Card className="rounded-xl shadow-md hover:shadow-lg transition-shadow">

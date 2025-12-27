@@ -178,15 +178,9 @@ export const mockMaintenanceRequests: MaintenanceRequest[] = [
     equipment: 'CNC Milling Machine A1',
     category: 'Mechanical',
     maintenanceTeam: 'Machine Shop Team',
-<<<<<<< HEAD
-    technician: 'Mike Johnson',
-    technicianAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Mike',
-    scheduledDate: '2025-12-28',
-=======
     technician: 'Ravi Kumar',
     technicianAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Ravi',
-    scheduledDate: '2024-12-28',
->>>>>>> 969cafbd7a77410aac087581bdd62f65d95f24ec
+    scheduledDate: '2025-12-28',
     duration: '4 hours',
     priority: 'high',
     stage: 'in-progress',
@@ -203,15 +197,9 @@ export const mockMaintenanceRequests: MaintenanceRequest[] = [
     equipment: 'Industrial Robot Arm R2',
     category: 'Lubrication',
     maintenanceTeam: 'Automation Team',
-<<<<<<< HEAD
-    technician: 'Alex Chen',
-    technicianAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alex',
-    scheduledDate: '2025-12-30',
-=======
     technician: 'Anil Mehra',
     technicianAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Anil',
-    scheduledDate: '2024-12-30',
->>>>>>> 969cafbd7a77410aac087581bdd62f65d95f24ec
+    scheduledDate: '2025-12-30',
     duration: '2 hours',
     priority: 'medium',
     stage: 'new',
@@ -228,22 +216,9 @@ export const mockMaintenanceRequests: MaintenanceRequest[] = [
     equipment: 'Hydraulic Press HP-500',
     category: 'Hydraulics',
     maintenanceTeam: 'Heavy Equipment Team',
-<<<<<<< HEAD
-    technician: 'Mike Johnson',
-    technicianAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Mike',
-    scheduledDate: '2025-12-25',
-    duration: '8 hours',
-    priority: 'urgent',
-    stage: 'in-progress',
-    employee: 'Tom Brown',
-    company: 'GearGuard Industries',
-    notes: 'Complete hydraulic system overhaul required. Multiple seal failures detected.',
-    instructions: '1. Drain hydraulic fluid\n2. Replace all seals\n3. Check pump\n4. Refill and test',
-    isOverdue: true,
-=======
     technician: 'Ravi Kumar',
     technicianAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Ravi',
-      scheduledDate: '2024-12-25',
+      scheduledDate: '2025-12-25',
       duration: '8 hours',
       priority: 'urgent',
       stage: 'in-progress',
@@ -252,7 +227,6 @@ export const mockMaintenanceRequests: MaintenanceRequest[] = [
       notes: 'Complete hydraulic system overhaul required. Multiple seal failures detected.',
       instructions: '1. Drain hydraulic fluid\n2. Replace all seals\n3. Check pump\n4. Refill and test',
       isOverdue: true,
->>>>>>> 969cafbd7a77410aac087581bdd62f65d95f24ec
   },
   {
     id: 'mr-004',
@@ -263,18 +237,7 @@ export const mockMaintenanceRequests: MaintenanceRequest[] = [
     maintenanceTeam: 'Machine Shop Team',
     technician: 'Alex Chen',
     technicianAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alex',
-<<<<<<< HEAD
-    scheduledDate: '2026-01-05',
-    duration: '3 hours',
-    priority: 'medium',
-    stage: 'new',
-    employee: 'Emily Davis',
-    company: 'GearGuard Industries',
-    notes: 'Monthly calibration check scheduled.',
-    instructions: 'Perform full optical alignment and power calibration.',
-    isOverdue: false,
-=======
-      scheduledDate: '2025-01-05',
+      scheduledDate: '2026-01-05',
       duration: '3 hours',
       priority: 'medium',
       stage: 'new',
@@ -283,7 +246,6 @@ export const mockMaintenanceRequests: MaintenanceRequest[] = [
       notes: 'Monthly calibration check scheduled.',
       instructions: 'Perform full optical alignment and power calibration.',
       isOverdue: false,
->>>>>>> 969cafbd7a77410aac087581bdd62f65d95f24ec
   },
   {
     id: 'mr-005',
@@ -294,21 +256,12 @@ export const mockMaintenanceRequests: MaintenanceRequest[] = [
     maintenanceTeam: 'Automation Team',
     technician: 'Lisa Park',
     technicianAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Lisa',
-<<<<<<< HEAD
-    scheduledDate: '2025-12-26',
-    duration: '1 hour',
-    priority: 'low',
-    stage: 'repaired',
-    employee: 'James Wilson',
-    company: 'GearGuard Industries',
-=======
-      scheduledDate: '2024-12-26',
+      scheduledDate: '2025-12-26',
       duration: '1 hour',
       priority: 'low',
       stage: 'repaired',
       employee: 'Sunita Reddy',
       company: 'Bharat Engineering',
->>>>>>> 969cafbd7a77410aac087581bdd62f65d95f24ec
     notes: 'Belt slippage reported. Tension adjustment completed.',
     instructions: 'Adjust belt tensioner to specified torque.',
     isOverdue: false,
@@ -322,21 +275,12 @@ export const mockMaintenanceRequests: MaintenanceRequest[] = [
     maintenanceTeam: 'Automation Team',
     technician: 'Lisa Park',
     technicianAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Lisa',
-<<<<<<< HEAD
-    scheduledDate: '2025-12-29',
-    duration: '5 hours',
-    priority: 'high',
-    stage: 'new',
-    employee: 'James Wilson',
-    company: 'GearGuard Industries',
-=======
-      scheduledDate: '2024-12-29',
+      scheduledDate: '2025-12-29',
       duration: '5 hours',
       priority: 'high',
       stage: 'new',
       employee: 'Neha Verma',
       company: 'Bharat Engineering',
->>>>>>> 969cafbd7a77410aac087581bdd62f65d95f24ec
     notes: 'Drive motor showing signs of failure. Replacement ordered.',
     instructions: '1. Disconnect power\n2. Remove old motor\n3. Install new motor\n4. Test operation',
     isOverdue: false,

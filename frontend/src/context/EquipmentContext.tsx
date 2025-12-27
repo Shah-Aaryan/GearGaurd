@@ -5,6 +5,7 @@ interface EquipmentContextType {
   equipment: Equipment[];
   updateEquipment: (id: string, updates: Partial<Equipment>) => void;
   addEquipment: (newEquipment: Equipment) => void;
+  deleteEquipment: (id: string) => void;
   getEquipmentByName: (name: string) => Equipment | undefined;
 }
 
@@ -31,12 +32,17 @@ export function EquipmentProvider({ children }: { children: ReactNode }) {
     setEquipment((prev) => [newEquipment, ...prev]);
   };
 
+
+  const deleteEquipment = (id: string) => {
+    setEquipment((prev) => prev.filter((eq) => eq.id !== id));
+  };
+
   const getEquipmentByName = (name: string) => {
     return equipment.find((eq) => eq.name === name);
   };
 
   return (
-    <EquipmentContext.Provider value={{ equipment, updateEquipment, addEquipment, getEquipmentByName }}>
+    <EquipmentContext.Provider value={{ equipment, updateEquipment, addEquipment, deleteEquipment, getEquipmentByName }}>
       {children}
     </EquipmentContext.Provider>
   );

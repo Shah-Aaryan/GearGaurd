@@ -8,6 +8,7 @@ import {
   AlertTriangle,
   CheckCircle,
   Wrench,
+  Trash2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,11 +54,15 @@ function getHealthColor(health: number) {
   return "text-destructive";
 }
 
+
 function getHealthBgColor(health: number) {
   if (health >= 70) return "bg-success";
   if (health >= 40) return "bg-warning";
   return "bg-destructive";
 }
+
+export default function EquipmentPage() {
+  // ...existing logic and return statement...
 
 function getStatusIcon(status: string) {
   switch (status) {
@@ -74,8 +79,7 @@ function getStatusIcon(status: string) {
   }
 }
 
-export default function EquipmentPage() {
-  const { equipment } = useEquipment();
+  const { equipment, deleteEquipment } = useEquipment();
   const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -222,10 +226,9 @@ export default function EquipmentPage() {
                     animate="visible"
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ delay: index * 0.05 }}
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => setSelectedEquipment(eq)}
+                    className="group hover:bg-muted/50"
                   >
-                    <TableCell>
+                    <TableCell onClick={() => setSelectedEquipment(eq)} style={{ cursor: 'pointer' }}>
                       <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-lg gradient-primary flex items-center justify-center">
                           <Settings2 className="h-5 w-5 text-primary-foreground" />
@@ -238,34 +241,37 @@ export default function EquipmentPage() {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>{eq.category}</TableCell>
-                    <TableCell className="font-mono text-sm">
-                      {eq.serialNumber}
-                    </TableCell>
-                    <TableCell>
+                    <TableCell onClick={() => setSelectedEquipment(eq)} style={{ cursor: 'pointer' }}>{eq.category}</TableCell>
+                    <TableCell onClick={() => setSelectedEquipment(eq)} style={{ cursor: 'pointer' }} className="font-mono text-sm">{eq.serialNumber}</TableCell>
+                    <TableCell onClick={() => setSelectedEquipment(eq)} style={{ cursor: 'pointer' }}>
                       <div className="flex items-center gap-3">
-                        <Progress
-                          value={eq.health}
-                          className="w-20 h-2"
-                        />
-                        <span className={`font-medium ${getHealthColor(eq.health)}`}>
-                          {eq.health}%
-                        </span>
+                        <Progress value={eq.health} className="w-20 h-2" />
+                        <span className={`font-medium ${getHealthColor(eq.health)}`}>{eq.health}%</span>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell onClick={() => setSelectedEquipment(eq)} style={{ cursor: 'pointer' }}>
                       <div className="flex items-center gap-2">
                         {getStatusIcon(eq.status)}
                         <span className="capitalize">{eq.status}</span>
                       </div>
                     </TableCell>
-                    <TableCell>{eq.technician}</TableCell>
-                    <TableCell className="text-right">
+                    <TableCell onClick={() => setSelectedEquipment(eq)} style={{ cursor: 'pointer' }}>{eq.technician}</TableCell>
+                    <TableCell className="text-right flex items-center gap-2 justify-end">
                       {eq.openRequests > 0 ? (
                         <Badge variant="secondary">{eq.openRequests}</Badge>
                       ) : (
                         <span className="text-muted-foreground">-</span>
                       )}
+                      <button
+                        title="Delete Equipment"
+                        className="ml-2 opacity-60 hover:opacity-100 transition-opacity"
+                        onClick={e => {
+                          e.stopPropagation();
+                          if (window.confirm('Delete this equipment?')) deleteEquipment(eq.id);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </button>
                     </TableCell>
                   </motion.tr>
                 ))}

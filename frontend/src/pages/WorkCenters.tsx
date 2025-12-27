@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Plus, Factory } from "lucide-react";
+import { Plus, Factory, Search, Filter } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -32,6 +32,7 @@ export default function WorkCenters() {
 
   const [workCenters, setWorkCenters] = useState<any[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const [form, setForm] = useState({
     name: "",
@@ -55,6 +56,13 @@ export default function WorkCenters() {
 
     setWorkCenters(merged);
   }, []);
+
+  // Filter work centers based on search query
+  const filteredWorkCenters = workCenters.filter(wc =>
+    wc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    wc.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    wc.tag.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   // Save user-created work centers only
   const persist = (list: any[]) => {
@@ -103,6 +111,18 @@ export default function WorkCenters() {
         </Button>
       </div>
 
+      {/* Search Bar */}
+      <div className="relative w-full max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search work centers..."
+          className="pl-10 pr-10 rounded-full shadow-inner"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+        <Filter className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      </div>
+
       <Card>
         <CardContent className="p-0">
           <Table>
@@ -118,7 +138,7 @@ export default function WorkCenters() {
             </TableHeader>
 
             <TableBody>
-              {workCenters.map((wc, i) => (
+              {filteredWorkCenters.map((wc, i) => (
                 <motion.tr
                   key={wc.id}
                   initial={{ opacity: 0 }}

@@ -1,16 +1,25 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { Equipment, mockEquipment } from "@/data/mockData";
 
 interface EquipmentContextType {
   equipment: Equipment[];
   updateEquipment: (id: string, updates: Partial<Equipment>) => void;
+  addEquipment: (newEquipment: Equipment) => void;
   getEquipmentByName: (name: string) => Equipment | undefined;
 }
 
 const EquipmentContext = createContext<EquipmentContextType | undefined>(undefined);
 
+
 export function EquipmentProvider({ children }: { children: ReactNode }) {
-  const [equipment, setEquipment] = useState<Equipment[]>(mockEquipment);
+  const [equipment, setEquipment] = useState<Equipment[]>(() => {
+    const stored = localStorage.getItem('equipment');
+    return stored ? JSON.parse(stored) : mockEquipment;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('equipment', JSON.stringify(equipment));
+  }, [equipment]);
 
   const updateEquipment = (id: string, updates: Partial<Equipment>) => {
     setEquipment((prev) =>
@@ -18,12 +27,16 @@ export function EquipmentProvider({ children }: { children: ReactNode }) {
     );
   };
 
+  const addEquipment = (newEquipment: Equipment) => {
+    setEquipment((prev) => [newEquipment, ...prev]);
+  };
+
   const getEquipmentByName = (name: string) => {
     return equipment.find((eq) => eq.name === name);
   };
 
   return (
-    <EquipmentContext.Provider value={{ equipment, updateEquipment, getEquipmentByName }}>
+    <EquipmentContext.Provider value={{ equipment, updateEquipment, addEquipment, getEquipmentByName }}>
       {children}
     </EquipmentContext.Provider>
   );

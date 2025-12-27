@@ -15,6 +15,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Equipment, mockTeams } from "@/data/mockData";
+import { useEquipment } from "@/context/EquipmentContext";
 import { useMaintenanceRequests } from "@/context/MaintenanceContext";
 import { Wrench, ChevronRight, AlertTriangle, CheckCircle } from "lucide-react";
 
@@ -35,6 +36,7 @@ const categories = [
 export function EquipmentForm({ equipment, onClose }: EquipmentFormProps) {
   const navigate = useNavigate();
   const { requests } = useMaintenanceRequests();
+  const { addEquipment } = useEquipment();
   const [formData, setFormData] = useState({
     name: equipment?.name || "",
     category: equipment?.category || "",
@@ -59,6 +61,25 @@ export function EquipmentForm({ equipment, onClose }: EquipmentFormProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!equipment) {
+      // Add new equipment
+      const newEquipment: Equipment = {
+        id: `eq-${Date.now()}`,
+        name: formData.name,
+        category: formData.category,
+        serialNumber: formData.serialNumber,
+        company: formData.company,
+        employee: formData.employee,
+        technician: formData.technician,
+        maintenanceTeam: formData.maintenanceTeam,
+        assignedDate: formData.assignedDate,
+        description: formData.description,
+        health: 100,
+        status: 'operational',
+        openRequests: 0
+      };
+      addEquipment(newEquipment);
+    }
     onClose();
   };
 

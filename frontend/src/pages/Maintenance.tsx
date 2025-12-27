@@ -29,7 +29,9 @@ import {
   GripVertical,
   Clock,
   AlertTriangle,
-  X,
+  FileText,
+  MessageSquare,
+  Send,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -37,12 +39,8 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Textarea } from "@/components/ui/textarea";
 
-import {
-  mockMaintenanceRequests,
-  MaintenanceRequest,
-  mockEquipment,
-} from "@/data/mockData";
 import { useMaintenanceRequests } from "@/context/MaintenanceContext";
 import { useEquipment } from "@/context/EquipmentContext";
 
@@ -51,7 +49,16 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
+
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 
 import { MaintenanceForm } from "@/components/maintenance/MaintenanceForm";
 
@@ -69,6 +76,165 @@ const stages = [
   { id: "scrap" as Stage, label: "Scrap", color: "border-l-muted-foreground" },
 ];
 
+// Types for worksheet comments
+type WorksheetComment = {
+  id: string;
+  text: string;
+  author: string;
+  authorAvatar?: string;
+  timestamp: string;
+  requestId: string;
+};
+
+/* ────────────────────────────────────────────── */
+/* WORKSHEET COMPONENT */
+/* ────────────────────────────────────────────── */
+
+function WorksheetSheet({
+  request,
+  open,
+  onOpenChange,
+}: {
+  request: MaintenanceRequest;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const [comments, setComments] = useState<WorksheetComment[]>([
+    {
+      id: "1",
+      text: "Initial diagnosis complete. Need replacement parts.",
+      author: "John Technician",
+      timestamp: "2024-01-15 10:30",
+      requestId: request.id,
+    },
+    {
+      id: "2",
+      text: "Parts ordered. Expected delivery in 2 days.",
+      author: "Sarah Manager",
+      timestamp: "2024-01-15 14:45",
+      requestId: request.id,
+    },
+  ]);
+  
+  const [newComment, setNewComment] = useState("");
+
+  const handleAddComment = () => {
+    if (!newComment.trim()) return;
+    
+    const comment: WorksheetComment = {
+      id: Date.now().toString(),
+      text: newComment,
+      author: "Current User", // In real app, get from auth context
+      timestamp: new Date().toLocaleString(),
+      requestId: request.id,
+    };
+    
+    setComments([...comments, comment]);
+    setNewComment("");
+  };
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>Worksheet - {request.subject}</SheetTitle>
+          <SheetDescription>
+            Maintenance request details and work comments
+          </SheetDescription>
+        </SheetHeader>
+
+        <div className="mt-6 space-y-6">
+          {/* Request Summary */}
+          <Card className="p-4">
+            <h3 className="font-semibold mb-2">Request Summary</h3>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div>
+                <span className="text-muted-foreground">Equipment:</span>
+                <p className="font-medium">{request.equipment}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Priority:</span>
+                <Badge className={getPriorityColor(request.priority)}>
+                  {request.priority}
+                </Badge>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Technician:</span>
+                <p className="font-medium">{request.technician}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Status:</span>
+                <p className="font-medium capitalize">{request.stage}</p>
+              </div>
+            </div>
+          </Card>
+
+          {/* Comments Section */}
+          <div>
+            <h3 className="font-semibold mb-4 flex items-center gap-2">
+              <MessageSquare className="h-5 w-5" />
+              Work Comments
+            </h3>
+            
+            <div className="space-y-4 mb-6 max-h-[400px] overflow-y-auto pr-2">
+              {comments.map((comment) => (
+                <Card key={comment.id} className="p-4">
+                  <div className="flex items-start gap-3">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback>
+                        {comment.author.charAt(0)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">{comment.author}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {comment.timestamp}
+                        </span>
+                      </div>
+                      <p className="mt-2 text-sm">{comment.text}</p>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+
+            {/* Add Comment */}
+            <div className="space-y-2">
+              <Textarea
+                placeholder="Add a comment about the work..."
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                className="min-h-[100px]"
+              />
+              <div className="flex justify-end">
+                <Button onClick={handleAddComment} size="sm">
+                  <Send className="h-4 w-4 mr-2" />
+                  Add Comment
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+// Helper function for priority colors
+const getPriorityColor = (priority: string) => {
+  switch (priority) {
+    case "urgent":
+      return "bg-destructive text-destructive-foreground";
+    case "high":
+      return "bg-warning text-warning-foreground";
+    case "medium":
+      return "bg-info text-info-foreground";
+    default:
+      return "bg-muted text-muted-foreground";
+  }
+};
+
 
 /* ────────────────────────────────────────────── */
 /* KANBAN CARD */
@@ -77,9 +243,11 @@ const stages = [
 function KanbanCard({
   request,
   onClick,
+  onWorksheetClick,
 }: {
   request: MaintenanceRequest;
   onClick: () => void;
+  onWorksheetClick: (request: MaintenanceRequest) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: request.id });
@@ -87,19 +255,6 @@ function KanbanCard({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "urgent":
-        return "bg-destructive text-destructive-foreground";
-      case "high":
-        return "bg-warning text-warning-foreground";
-      case "medium":
-        return "bg-info text-info-foreground";
-      default:
-        return "bg-muted text-muted-foreground";
-    }
   };
 
   return (
@@ -164,6 +319,20 @@ function KanbanCard({
               </span>
             </div>
           </div>
+
+          {/* Worksheet Button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="opacity-0 group-hover:opacity-100 transition-opacity hover:bg-accent"
+            onClick={(e) => {
+              e.stopPropagation();
+              onWorksheetClick(request);
+            }}
+            title="Open Worksheet"
+          >
+            <FileText className="h-4 w-4" />
+          </Button>
         </div>
       </Card>
     </motion.div>
@@ -179,10 +348,12 @@ function KanbanColumn({
   stage,
   requests,
   onCardClick,
+  onWorksheetClick,
 }: {
   stage: { id: Stage; label: string; color: string };
   requests: MaintenanceRequest[];
   onCardClick: (r: MaintenanceRequest) => void;
+  onWorksheetClick: (r: MaintenanceRequest) => void;
 }) {
   return (
     <div className="flex flex-col min-w-[300px] max-w-[350px] flex-1">
@@ -205,7 +376,12 @@ function KanbanColumn({
         >
           <AnimatePresence>
             {requests.map(r => (
-              <KanbanCard key={r.id} request={r} onClick={() => onCardClick(r)} />
+              <KanbanCard 
+                key={r.id} 
+                request={r} 
+                onClick={() => onCardClick(r)}
+                onWorksheetClick={onWorksheetClick}
+              />
             ))}
           </AnimatePresence>
         </SortableContext>
@@ -227,13 +403,15 @@ function KanbanColumn({
 
 export default function Maintenance() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { requests, updateRequest } = useMaintenanceRequests();
+  const { requests, updateRequest, addRequest } = useMaintenanceRequests();
   const { equipment, updateEquipment } = useEquipment();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterEquipment, setFilterEquipment] = useState<string | null>(null);
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [selectedRequest, setSelectedRequest] =
+    useState<MaintenanceRequest | null>(null);
+  const [worksheetRequest, setWorksheetRequest] =
     useState<MaintenanceRequest | null>(null);
 
   const [showForm, setShowForm] = useState(false);
@@ -330,13 +508,52 @@ export default function Maintenance() {
     ? requests.find(r => r.id === activeId)
     : null;
 
+  // Handle new request creation
+  const handleNewRequest = (formData: Partial<MaintenanceRequest>) => {
+    // Create a complete new request from form data
+    const newRequest: MaintenanceRequest = {
+      id: `req-${Date.now()}`,
+      subject: formData.subject || "New Maintenance Request",
+      equipment: formData.equipment || "Unspecified",
+      workCenter: formData.workCenter || "Main Workshop",
+      priority: formData.priority || "medium",
+      technician: formData.technician || "Unassigned",
+      technicianAvatar: formData.technicianAvatar || "",
+      duration: formData.duration || "1h",
+      stage: "new" as Stage,
+      createdAt: new Date().toISOString(),
+      isOverdue: formData.isOverdue || false,
+      description: formData.description || "",
+      location: formData.location || "Main Workshop",
+      estimatedCost: formData.estimatedCost || 0,
+      actualCost: formData.actualCost || 0,
+      completionDate: formData.completionDate,
+      notes: formData.notes || "",
+      attachments: formData.attachments || [],
+      // Add any other required fields from your MaintenanceRequest type
+    };
+    
+    console.log("Adding new request:", newRequest);
+    
+    // Add the new request using context
+    addRequest(newRequest);
+    setShowForm(false);
+  };
+
+  // Handle update of existing request
+  const handleUpdateRequest = (id: string, updates: Partial<MaintenanceRequest>) => {
+    console.log("Updating request:", id, updates);
+    updateRequest(id, updates);
+    setSelectedRequest(null);
+  };
+
 
   /* UI */
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
 
-      {/* Header (No Global Search — Only Title + Button) */}
+      {/* Header */}
       <div className="flex items-center justify-between py-2">
         <h1 className="text-2xl font-bold">Maintenance Teams</h1>
 
@@ -347,9 +564,8 @@ export default function Maintenance() {
       </div>
 
 
-      {/* ✅ BELOW SEARCH BAR — THIS ONE STAYS */}
+      {/* Search Bar */}
       <div className="flex gap-2 items-center justify-between">
-
         <div className="relative w-full max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
 
@@ -362,7 +578,6 @@ export default function Maintenance() {
 
           <Filter className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         </div>
-
       </div>
 
 
@@ -380,6 +595,7 @@ export default function Maintenance() {
               stage={stage}
               requests={getRequestsByStage(stage.id)}
               onCardClick={setSelectedRequest}
+              onWorksheetClick={setWorksheetRequest}
             />
           ))}
         </div>
@@ -399,31 +615,55 @@ export default function Maintenance() {
 
       {/* Request Detail Dialog */}
       <Dialog open={!!selectedRequest} onOpenChange={() => setSelectedRequest(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{selectedRequest?.subject}</DialogTitle>
+            <DialogTitle>Edit Request: {selectedRequest?.subject}</DialogTitle>
+            <DialogDescription>
+              Update the maintenance request details
+            </DialogDescription>
           </DialogHeader>
 
           {selectedRequest && (
-            <MaintenanceForm
-              request={selectedRequest}
-              onClose={() => setSelectedRequest(null)}
-            />
+            <div className="mt-4">
+              <MaintenanceForm
+                request={selectedRequest}
+                onClose={() => setSelectedRequest(null)}
+                onSubmit={(data) => handleUpdateRequest(selectedRequest.id, data)}
+              />
+            </div>
           )}
         </DialogContent>
       </Dialog>
 
 
-      {/* New Request */}
+      {/* New Request Dialog */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>New Maintenance Request</DialogTitle>
+            <DialogTitle>Create New Maintenance Request</DialogTitle>
+            <DialogDescription>
+              Fill in the details for the new maintenance request
+            </DialogDescription>
           </DialogHeader>
 
-          <MaintenanceForm onClose={() => setShowForm(false)} />
+          <div className="mt-4">
+            <MaintenanceForm 
+              onClose={() => setShowForm(false)}
+              onSubmit={handleNewRequest}
+            />
+          </div>
         </DialogContent>
       </Dialog>
+
+
+      {/* Worksheet Sheet */}
+      {worksheetRequest && (
+        <WorksheetSheet
+          request={worksheetRequest}
+          open={!!worksheetRequest}
+          onOpenChange={(open) => !open && setWorksheetRequest(null)}
+        />
+      )}
 
     </motion.div>
   );

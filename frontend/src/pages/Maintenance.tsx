@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+
 import {
   DndContext,
   DragOverlay,
@@ -12,52 +13,76 @@ import {
   DragStartEvent,
   DragEndEvent,
 } from "@dnd-kit/core";
+
 import {
   SortableContext,
   verticalListSortingStrategy,
   useSortable,
 } from "@dnd-kit/sortable";
+
 import { CSS } from "@dnd-kit/utilities";
-import { Plus, Filter, Search, GripVertical, Clock, AlertTriangle, X } from "lucide-react";
+
+import {
+  Plus,
+  Filter,
+  Search,
+  GripVertical,
+  Clock,
+  AlertTriangle,
+  X,
+} from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MaintenanceRequest, mockEquipment } from "@/data/mockData";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+
+import {
+  mockMaintenanceRequests,
+  MaintenanceRequest,
+  mockEquipment,
+} from "@/data/mockData";
 import { useMaintenanceRequests } from "@/context/MaintenanceContext";
 import { useEquipment } from "@/context/EquipmentContext";
+
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+
 import { MaintenanceForm } from "@/components/maintenance/MaintenanceForm";
+
+
+/* ────────────────────────────────────────────── */
+/* TYPES & STAGES */
+/* ────────────────────────────────────────────── */
 
 type Stage = "new" | "in-progress" | "repaired" | "scrap";
 
-const stages: { id: Stage; label: string; color: string }[] = [
-  { id: "new", label: "New", color: "border-l-info" },
-  { id: "in-progress", label: "In Progress", color: "border-l-warning" },
-  { id: "repaired", label: "Repaired", color: "border-l-success" },
-  { id: "scrap", label: "Scrap", color: "border-l-muted-foreground" },
+const stages = [
+  { id: "new" as Stage, label: "New", color: "border-l-info" },
+  { id: "in-progress" as Stage, label: "In Progress", color: "border-l-warning" },
+  { id: "repaired" as Stage, label: "Repaired", color: "border-l-success" },
+  { id: "scrap" as Stage, label: "Scrap", color: "border-l-muted-foreground" },
 ];
 
-interface KanbanCardProps {
+
+/* ────────────────────────────────────────────── */
+/* KANBAN CARD */
+/* ────────────────────────────────────────────── */
+
+function KanbanCard({
+  request,
+  onClick,
+}: {
   request: MaintenanceRequest;
   onClick: () => void;
-}
-
-function KanbanCard({ request, onClick }: KanbanCardProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: request.id });
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: request.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -84,7 +109,6 @@ function KanbanCard({ request, onClick }: KanbanCardProps) {
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: isDragging ? 0.5 : 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.9 }}
-      className="touch-manipulation"
     >
       <Card
         variant="kanban"
@@ -94,6 +118,7 @@ function KanbanCard({ request, onClick }: KanbanCardProps) {
         onClick={onClick}
       >
         <div className="flex items-start gap-3">
+
           <div
             {...attributes}
             {...listeners}
@@ -101,18 +126,20 @@ function KanbanCard({ request, onClick }: KanbanCardProps) {
           >
             <GripVertical className="h-4 w-4 text-muted-foreground" />
           </div>
+
           <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-2">
+            <div className="flex items-start justify-between">
               <h4 className="font-medium truncate">{request.subject}</h4>
+
               {request.isOverdue && (
-                <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
+                <AlertTriangle className="h-4 w-4 text-destructive" />
               )}
             </div>
-            
+
             <p className="text-sm text-muted-foreground mt-1">
               {request.equipment || request.workCenter}
             </p>
-            
+
             <div className="flex items-center gap-2 mt-3">
               <Avatar className="h-6 w-6">
                 <AvatarImage src={request.technicianAvatar} />
@@ -120,22 +147,21 @@ function KanbanCard({ request, onClick }: KanbanCardProps) {
                   {request.technician.charAt(0)}
                 </AvatarFallback>
               </Avatar>
+
               <span className="text-xs text-muted-foreground">
                 {request.technician}
               </span>
             </div>
-            
+
             <div className="flex items-center justify-between mt-3">
-              <Badge
-                className={getPriorityColor(request.priority)}
-                variant="secondary"
-              >
+              <Badge className={getPriorityColor(request.priority)}>
                 {request.priority}
               </Badge>
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+
+              <span className="flex items-center gap-1 text-xs text-muted-foreground">
                 <Clock className="h-3 w-3" />
                 {request.duration}
-              </div>
+              </span>
             </div>
           </div>
         </div>
@@ -144,6 +170,11 @@ function KanbanCard({ request, onClick }: KanbanCardProps) {
   );
 }
 
+
+/* ────────────────────────────────────────────── */
+/* COLUMN */
+/* ────────────────────────────────────────────── */
+
 function KanbanColumn({
   stage,
   requests,
@@ -151,40 +182,37 @@ function KanbanColumn({
 }: {
   stage: { id: Stage; label: string; color: string };
   requests: MaintenanceRequest[];
-  onCardClick: (request: MaintenanceRequest) => void;
+  onCardClick: (r: MaintenanceRequest) => void;
 }) {
-  const { setNodeRef } = useSortable({ id: stage.id });
-
   return (
-    <div ref={setNodeRef} className="flex flex-col min-w-[300px] max-w-[350px] flex-1 bg-card rounded-lg border">
-      <div className={`flex items-center justify-between p-4 rounded-t-lg bg-muted ${stage.color} border-l-4`}>
-        <div className="flex items-center gap-2">
-          <h3 className="font-semibold text-sm">{stage.label}</h3>
-          <Badge variant="secondary" className="rounded-full h-6 w-6 flex items-center justify-center p-0">
-            {requests.length}
-          </Badge>
-        </div>
+    <div className="flex flex-col min-w-[300px] max-w-[350px] flex-1">
+
+      <div
+        className={`flex items-center justify-between p-4 bg-card rounded-t-xl border border-b-0 ${stage.color} border-l-4`}
+      >
+        <h3 className="font-semibold">{stage.label}</h3>
+
+        <Badge variant="secondary" className="rounded-full">
+          {requests.length}
+        </Badge>
       </div>
-      
-      <div className="flex-1 p-3 space-y-3 min-h-[500px] overflow-y-auto">
+
+      <div className="flex-1 bg-muted/30 border rounded-b-xl border-t-0 p-3 space-y-3 min-h-[400px]">
+
         <SortableContext
-          items={requests.map((r) => r.id)}
+          items={requests.map(r => r.id)}
           strategy={verticalListSortingStrategy}
         >
-          <AnimatePresence mode="popLayout">
-            {requests.map((request) => (
-              <KanbanCard
-                key={request.id}
-                request={request}
-                onClick={() => onCardClick(request)}
-              />
+          <AnimatePresence>
+            {requests.map(r => (
+              <KanbanCard key={r.id} request={r} onClick={() => onCardClick(r)} />
             ))}
           </AnimatePresence>
         </SortableContext>
-        
+
         {requests.length === 0 && (
-          <div className="flex items-center justify-center h-32 text-muted-foreground text-xs">
-            No requests in {stage.label}
+          <div className="flex items-center justify-center h-24 text-sm text-muted-foreground">
+            No requests
           </div>
         )}
       </div>
@@ -192,16 +220,23 @@ function KanbanColumn({
   );
 }
 
+
+/* ────────────────────────────────────────────── */
+/* PAGE */
+/* ────────────────────────────────────────────── */
+
 export default function Maintenance() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { requests, updateRequest } = useMaintenanceRequests();
   const { equipment, updateEquipment } = useEquipment();
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const [selectedRequest, setSelectedRequest] = useState<MaintenanceRequest | null>(null);
-  const [showForm, setShowForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-<<<<<<< HEAD
   const [filterEquipment, setFilterEquipment] = useState<string | null>(null);
+
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [selectedRequest, setSelectedRequest] =
+    useState<MaintenanceRequest | null>(null);
+
+  const [showForm, setShowForm] = useState(false);
 
   // Get equipment filter from URL on mount
   useEffect(() => {
@@ -210,239 +245,157 @@ export default function Maintenance() {
       setFilterEquipment(decodeURIComponent(equipmentParam));
     }
   }, [searchParams]);
-=======
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth <= 640);
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
->>>>>>> 93cef66640baca4c937a812bea3bfa0179960b2c
 
   const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor)
   );
 
-  const filteredRequests = requests.filter((r) => {
-    const matchesSearch =
-      r.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  /* FILTER ONLY IN KANBAN SEARCH BAR */
+  const filteredRequests = requests.filter(r => {
+    const matchesSearch = r.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
       r.technician.toLowerCase().includes(searchQuery.toLowerCase()) ||
       r.equipment?.toLowerCase().includes(searchQuery.toLowerCase());
-
+    
     const matchesEquipment = !filterEquipment || r.equipment === filterEquipment;
-
+    
     return matchesSearch && matchesEquipment;
   });
 
   const getRequestsByStage = (stage: Stage) =>
-    filteredRequests.filter((r) => r.stage === stage);
+    filteredRequests.filter(r => r.stage === stage);
 
-  const handleDragStart = (event: DragStartEvent) => {
-    setActiveId(event.active.id as string);
-  };
 
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
+  /* DRAG HANDLERS */
+
+  const handleDragStart = (e: DragStartEvent) =>
+    setActiveId(e.active.id as string);
+
+  const handleDragEnd = (e: DragEndEvent) => {
+    const { active, over } = e;
     setActiveId(null);
-
     if (!over) return;
 
-    const activeRequest = requests.find((r) => r.id === active.id);
-    if (!activeRequest) return;
+    const activeReq = requests.find(r => r.id === active.id);
+    const overReq = requests.find(r => r.id === over.id);
 
-    // The over ID should be a stage ID
-    const newStageId = over.id as string;
-    const isValidStage = stages.some((s) => s.id === newStageId);
+    if (!activeReq || !overReq || activeReq.stage === overReq.stage) return;
+
+    const newStage = overReq.stage;
     
-    if (!isValidStage) return;
+    // Update request stage using context
+    updateRequest(active.id as string, { stage: newStage });
 
-    const newStage = newStageId as Stage;
-    
-    if (activeRequest.stage !== newStage) {
-      // Update request stage using context
-      updateRequest(active.id as string, { stage: newStage });
+    // SCRAP LOGIC: Check if ALL requests for this equipment should be scrapped
+    if (activeReq.equipment) {
+      // Get all requests for this equipment (after the update)
+      const updatedRequests = requests.map((r) =>
+        r.id === active.id ? { ...r, stage: newStage } : r
+      );
+      const equipmentRequests = updatedRequests.filter(
+        (r) => r.equipment === activeReq.equipment
+      );
+      
+      // Equipment is scrapped only if ALL its requests are in scrap stage
+      const allInScrap = equipmentRequests.length > 0 && 
+        equipmentRequests.every((r) => r.stage === "scrap");
 
-      // SCRAP LOGIC: Check if ALL requests for this equipment should be scrapped
-      if (activeRequest.equipment) {
-        // Get all requests for this equipment (after the update)
-        const updatedRequests = requests.map((r) =>
-          r.id === active.id ? { ...r, stage: newStage } : r
-        );
-        const equipmentRequests = updatedRequests.filter(
-          (r) => r.equipment === activeRequest.equipment
-        );
-        
-        // Equipment is scrapped only if ALL its requests are in scrap stage
-        const allInScrap = equipmentRequests.length > 0 && 
-          equipmentRequests.every((r) => r.stage === "scrap");
-
-        const equipmentToUpdate = equipment.find(
-          (eq) => eq.name === activeRequest.equipment
-        );
-        
-        if (equipmentToUpdate && equipmentToUpdate.id) {
-          if (allInScrap) {
-            // Mark as scrapped only if all requests are in scrap
-            updateEquipment(equipmentToUpdate.id, {
-              status: "scrapped" as const,
-              isScrapped: true,
-              scrapDate: new Date().toISOString().split("T")[0],
-              scrapReason: `Equipment scrapped due to maintenance request: ${activeRequest.subject}`,
-            });
-          } else if (equipmentToUpdate.isScrapped) {
-            // Un-scrap if at least one request is moved out of scrap
-            updateEquipment(equipmentToUpdate.id, {
-              status: "operational" as const,
-              isScrapped: false,
-              scrapDate: undefined,
-              scrapReason: undefined,
-            });
-          }
+      const equipmentToUpdate = equipment.find(
+        (eq) => eq.name === activeReq.equipment
+      );
+      
+      if (equipmentToUpdate && equipmentToUpdate.id) {
+        if (allInScrap) {
+          // Mark as scrapped only if all requests are in scrap
+          updateEquipment(equipmentToUpdate.id, {
+            status: "scrapped" as const,
+            isScrapped: true,
+            scrapDate: new Date().toISOString().split("T")[0],
+            scrapReason: `Equipment scrapped due to maintenance request: ${activeReq.subject}`,
+          });
+        } else if (equipmentToUpdate.isScrapped) {
+          // Un-scrap if at least one request is moved out of scrap
+          updateEquipment(equipmentToUpdate.id, {
+            status: "operational" as const,
+            isScrapped: false,
+            scrapDate: undefined,
+            scrapReason: undefined,
+          });
         }
       }
     }
   };
 
   const activeRequest = activeId
-    ? requests.find((r) => r.id === activeId)
+    ? requests.find(r => r.id === activeId)
     : null;
 
+
+  /* UI */
+
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="space-y-6"
-    >
-<<<<<<< HEAD
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Maintenance Requests</h1>
-          <p className="text-muted-foreground">
-            {filterEquipment ? `Requests for ${filterEquipment}` : "Drag and drop to update request status"}
-          </p>
-=======
-      {/* Header - single row, left: title, center: search, right: actions */}
-      <div className="flex items-center w-full gap-2 py-2 px-0 min-h-[56px]">
-        {/* Left: Module Title */}
-        <div className="flex items-center min-w-0 flex-shrink-0">
-          <h1 className="text-xl sm:text-2xl font-bold whitespace-nowrap">Maintenance Teams</h1>
-        </div>
-        {/* Center: Search Bar (always in header row, never below) */}
-        <div className="flex-1 flex justify-center min-w-0">
-          <div className="relative flex items-center w-full max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search..."
-              className="pl-10 pr-12 rounded-full shadow-inner focus:ring-2 focus:ring-primary/40 w-full"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-            />
-            <Button
-              variant="outline"
-              size="icon"
-              className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full"
-              tabIndex={-1}
-            >
-              <Filter className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-        {/* Right: Actions */}
-        <div className="flex items-center flex-shrink-0 ml-2">
-          <Button onClick={() => setShowForm(true)} variant="hero">
-            <Plus className="h-4 w-4 mr-2" />
-            New Request
-          </Button>
->>>>>>> 93cef66640baca4c937a812bea3bfa0179960b2c
-        </div>
-      </div>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
 
-<<<<<<< HEAD
-      {/* Active Equipment Filter Badge */}
-      {filterEquipment && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-2 p-3 bg-primary/10 rounded-lg border border-primary/20"
-        >
-          <Badge variant="secondary">Filtered by: {filterEquipment}</Badge>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => {
-              setFilterEquipment(null);
-              setSearchParams({});
-            }}
-            className="h-6 px-2"
-          >
-            <X className="h-4 w-4" />
-            Clear filter
-          </Button>
-        </motion.div>
-      )}
+      {/* Header (No Global Search — Only Title + Button) */}
+      <div className="flex items-center justify-between py-2">
+        <h1 className="text-2xl font-bold">Maintenance Teams</h1>
 
-      {/* Search & Filter */}
-      <div className="flex gap-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search requests..."
-            className="pl-10"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-        <Button variant="outline">
-          <Filter className="h-4 w-4 mr-2" />
-          Filter
+        <Button onClick={() => setShowForm(true)} variant="hero">
+          <Plus className="h-4 w-4 mr-2" />
+          New Request
         </Button>
       </div>
 
+
+      {/* ✅ BELOW SEARCH BAR — THIS ONE STAYS */}
+      <div className="flex gap-2 items-center justify-between">
+
+        <div className="relative w-full max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+
+          <Input
+            placeholder="Search maintenance requests..."
+            className="pl-10 pr-10 rounded-full shadow-inner"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+          />
+
+          <Filter className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        </div>
+
+      </div>
+
+
       {/* Kanban Board */}
-=======
-      {/* Kanban Board and rest of the page... */}
->>>>>>> 93cef66640baca4c937a812bea3bfa0179960b2c
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <SortableContext
-          items={[...stages.map((s) => s.id), ...filteredRequests.map((r) => r.id)]}
-          strategy={verticalListSortingStrategy}
-        >
-          <div className="flex gap-4 overflow-x-auto pb-4">
-            {stages.map((stage) => (
-              <KanbanColumn
-                key={stage.id}
-                stage={stage}
-                requests={getRequestsByStage(stage.id)}
-                onCardClick={setSelectedRequest}
-              />
-            ))}
-          </div>
-        </SortableContext>
+        <div className="flex gap-4 overflow-x-auto pb-4">
+          {stages.map(stage => (
+            <KanbanColumn
+              key={stage.id}
+              stage={stage}
+              requests={getRequestsByStage(stage.id)}
+              onCardClick={setSelectedRequest}
+            />
+          ))}
+        </div>
 
         <DragOverlay>
-          {activeRequest ? (
+          {activeRequest && (
             <Card className="p-4 shadow-2xl rotate-3 scale-105">
               <h4 className="font-medium">{activeRequest.subject}</h4>
               <p className="text-sm text-muted-foreground mt-1">
                 {activeRequest.equipment}
               </p>
             </Card>
-          ) : null}
+          )}
         </DragOverlay>
       </DndContext>
+
 
       {/* Request Detail Dialog */}
       <Dialog open={!!selectedRequest} onOpenChange={() => setSelectedRequest(null)}>
@@ -450,6 +403,7 @@ export default function Maintenance() {
           <DialogHeader>
             <DialogTitle>{selectedRequest?.subject}</DialogTitle>
           </DialogHeader>
+
           {selectedRequest && (
             <MaintenanceForm
               request={selectedRequest}
@@ -459,15 +413,18 @@ export default function Maintenance() {
         </DialogContent>
       </Dialog>
 
-      {/* New Request Dialog */}
+
+      {/* New Request */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>New Maintenance Request</DialogTitle>
           </DialogHeader>
+
           <MaintenanceForm onClose={() => setShowForm(false)} />
         </DialogContent>
       </Dialog>
+
     </motion.div>
   );
 }

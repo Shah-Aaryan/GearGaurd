@@ -78,14 +78,6 @@ export function Navbar({ onMenuClick, showMenuButton = false, children }: Navbar
             </motion.div>
           </Button>
 
-          {/* Notifications */}
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="h-5 w-5" />
-            <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground flex items-center justify-center">
-              3
-            </span>
-          </Button>
-
           {/* User Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

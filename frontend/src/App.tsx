@@ -18,6 +18,7 @@ import WorkCenters from "./pages/WorkCenters";
 import Reporting from "./pages/Reporting";
 import { AppLayout } from "./components/layout/AppLayout";
 import NotFound from "./pages/NotFound";
+import ThreeDEquipments from "./pages/threedEquipments";
 
 const queryClient = new QueryClient();
 
@@ -25,31 +26,29 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
       <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<Landing />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-
-            {/* Protected App Routes */}
-            <Route path="/app" element={<AppLayout />}>
-              <Route path="dashboard" element={<Dashboard />} />
-              <Route path="maintenance" element={<Maintenance />} />
-              <Route path="calendar" element={<Calendar />} />
-              <Route path="equipment" element={<Equipment />} />
-              <Route path="equipment-3d" element={<ThreeDEquipments />} />
-              <Route path="teams" element={<Teams />} />
-              <Route path="work-centers" element={<WorkCenters />} />
-              <Route path="reporting" element={<Reporting />} />
-            </Route>
-
-            {/* Fallback */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+        <MaintenanceProvider>
+          <EquipmentProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Landing />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Signup />} />
+                <Route path="/app" element={<AppLayout />}>
+                  <Route path="dashboard" element={<Dashboard />} />
+                  <Route path="maintenance" element={<Maintenance />} />
+                  <Route path="calendar" element={<Calendar />} />
+                  <Route path="equipment" element={<Equipment />} />
+                  <Route path="teams" element={<Teams />} />
+                  <Route path="work-centers" element={<WorkCenters />} />
+                  <Route path="reporting" element={<Reporting />} />
+                </Route>
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </EquipmentProvider>
+        </MaintenanceProvider>
       </TooltipProvider>
     </ThemeProvider>
   </QueryClientProvider>

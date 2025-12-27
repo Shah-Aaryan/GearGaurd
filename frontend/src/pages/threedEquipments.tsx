@@ -5,7 +5,7 @@ import Spline from '@splinetool/react-spline';
 // Static equipment data
 const EQUIPMENT_DATA = [
   {
-    name: 'CNC Milling Machine',
+    name: 'Press Machine',
     category: 'Production',
     status: 'Operational',
     statusColor: 'bg-emerald-500',
@@ -17,7 +17,7 @@ const EQUIPMENT_DATA = [
     borderColor: 'border-blue-200 dark:border-blue-800'
   },
   {
-    name: 'Industrial Server Rack',
+    name: 'Keyboard',
     category: 'IT Infrastructure',
     status: 'Maintenance Due',
     statusColor: 'bg-amber-500',
@@ -29,7 +29,7 @@ const EQUIPMENT_DATA = [
     borderColor: 'border-purple-200 dark:border-purple-800'
   },
   {
-    name: 'Hydraulic Pump Unit',
+    name: 'Compression Printer',
     category: 'Electrical',
     status: 'Critical',
     statusColor: 'bg-rose-600',

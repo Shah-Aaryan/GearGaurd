@@ -86,16 +86,16 @@ export function Navbar({ onMenuClick, showMenuButton = false, children }: Navbar
                   whileHover={{ scale: 1.05 }}
                   className="h-9 w-9 rounded-full gradient-primary flex items-center justify-center"
                 >
-                  <span className="text-sm font-medium text-primary-foreground">JD</span>
+                  <span className="text-sm font-medium text-primary-foreground">VJ</span>
                 </motion.div>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">John Doe</p>
+                  <p className="text-sm font-medium leading-none">VANSH JAIN</p>
                   <p className="text-xs leading-none text-muted-foreground">
-                    john.doe@gearguard.com
+                    vansh.jain@gmail.com
                   </p>
                 </div>
               </DropdownMenuLabel>

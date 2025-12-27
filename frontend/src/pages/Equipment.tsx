@@ -73,15 +73,15 @@ function getStatusIcon(status: string) {
 
 export default function EquipmentPage() {
   const [equipment, setEquipment] = useState(mockEquipment);
-  const [searchQuery, setSearchQuery] = useState("");
   const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const filteredEquipment = equipment.filter(
     (eq) =>
-      eq.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      eq.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      eq.serialNumber.toLowerCase().includes(searchQuery.toLowerCase())
+      eq.name.toLowerCase().includes("") ||
+      eq.category.toLowerCase().includes("") ||
+      eq.serialNumber.toLowerCase().includes("")
   );
 
   const stats = {
@@ -97,7 +97,6 @@ export default function EquipmentPage() {
       animate={{ opacity: 1 }}
       className="space-y-6"
     >
-      {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold">Equipment</h1>

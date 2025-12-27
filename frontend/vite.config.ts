@@ -8,6 +8,10 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    // Enable history API fallback for React Router
+    middlewareMode: false,
+    fs: { allow: ["."] },
+    historyApiFallback: true,
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {

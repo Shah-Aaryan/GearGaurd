@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   DndContext,
@@ -192,6 +192,14 @@ export default function Maintenance() {
   const [selectedRequest, setSelectedRequest] = useState<MaintenanceRequest | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth <= 640);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -244,38 +252,42 @@ export default function Maintenance() {
       animate={{ opacity: 1 }}
       className="space-y-6"
     >
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Maintenance Requests</h1>
-          <p className="text-muted-foreground">
-            Drag and drop to update request status
-          </p>
+      {/* Header - single row, left: title, center: search, right: actions */}
+      <div className="flex items-center w-full gap-2 py-2 px-0 min-h-[56px]">
+        {/* Left: Module Title */}
+        <div className="flex items-center min-w-0 flex-shrink-0">
+          <h1 className="text-xl sm:text-2xl font-bold whitespace-nowrap">Maintenance Teams</h1>
         </div>
-        <Button onClick={() => setShowForm(true)} variant="hero">
-          <Plus className="h-4 w-4 mr-2" />
-          New Request
-        </Button>
+        {/* Center: Search Bar (always in header row, never below) */}
+        <div className="flex-1 flex justify-center min-w-0">
+          <div className="relative flex items-center w-full max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search..."
+              className="pl-10 pr-12 rounded-full shadow-inner focus:ring-2 focus:ring-primary/40 w-full"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+            />
+            <Button
+              variant="outline"
+              size="icon"
+              className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full"
+              tabIndex={-1}
+            >
+              <Filter className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        {/* Right: Actions */}
+        <div className="flex items-center flex-shrink-0 ml-2">
+          <Button onClick={() => setShowForm(true)} variant="hero">
+            <Plus className="h-4 w-4 mr-2" />
+            New Request
+          </Button>
+        </div>
       </div>
 
-      {/* Search & Filter */}
-      <div className="flex gap-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search requests..."
-            className="pl-10"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-        <Button variant="outline">
-          <Filter className="h-4 w-4 mr-2" />
-          Filter
-        </Button>
-      </div>
-
-      {/* Kanban Board */}
+      {/* Kanban Board and rest of the page... */}
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}

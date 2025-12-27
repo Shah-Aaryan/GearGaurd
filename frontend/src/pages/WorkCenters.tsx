@@ -1,17 +1,21 @@
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { Plus, Factory } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { mockWorkCenters } from "@/data/mockData";
 
 export default function WorkCenters() {
-  const [searchQuery, setSearchQuery] = useState("");
-    return (
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Work Centers</h1>
-            <p className="text-muted-foreground">Manage production work centers</p>
-          </div>
-          <Button variant="hero"><Plus className="h-4 w-4 mr-2" />Add Work Center</Button>
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Work Centers</h1>
+          <p className="text-muted-foreground">Manage production work centers</p>
         </div>
+        <Button variant="hero"><Plus className="h-4 w-4 mr-2" />Add Work Center</Button>
+      </div>
 
       <Card>
         <CardContent className="p-0">
@@ -48,7 +52,6 @@ export default function WorkCenters() {
           </Table>
         </CardContent>
       </Card>
-
     </motion.div>
   );
 }

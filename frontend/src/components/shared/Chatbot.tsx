@@ -12,13 +12,7 @@ interface Message {
   timestamp: Date;
 }
 
-const mockResponses = [
-  "I can help you find information about equipment, maintenance requests, or teams. What would you like to know?",
-  "Based on the current data, you have 3 equipment items requiring attention and 2 overdue maintenance requests.",
-  "The Machine Shop Team has the highest workload right now at 85% utilization. Would you like me to help redistribute tasks?",
-  "I found 2 preventive maintenance tasks scheduled for this week. Should I show you the details?",
-  "The CNC Milling Machine A1 has an open maintenance request for spindle bearing replacement. Priority is high.",
-];
+
 
 export function Chatbot() {
   const [isOpen, setIsOpen] = useState(false);
@@ -47,18 +41,47 @@ export function Chatbot() {
     setInput("");
     setIsTyping(true);
 
-    // Simulate AI response
     setTimeout(() => {
+      const answer = getBotAnswer(input);
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "bot",
-        content: mockResponses[Math.floor(Math.random() * mockResponses.length)],
+        content: answer,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, botMessage]);
       setIsTyping(false);
-    }, 1500);
+    }, 900);
   };
+
+  function getBotAnswer(question: string): string {
+    const q = question.toLowerCase();
+    if (q.includes("maintenance")) {
+      return "The maintenance module helps you track, schedule, and manage all maintenance requests and preventive tasks.";
+    }
+    if (q.includes("team")) {
+      return "Teams are groups of technicians and staff who handle maintenance and equipment operations. You can view and manage teams in the Teams section.";
+    }
+    if (q.includes("equipment")) {
+      return "The Equipment section lists all your machines and assets. You can view details, status, and maintenance history for each equipment item.";
+    }
+    if (q.includes("kanban")) {
+      return "The Kanban board shows all maintenance requests by stage: new, in-progress, repaired, and closed. Drag and drop to update status.";
+    }
+    if (q.includes("report")) {
+      return "The Reporting module provides analytics and charts for maintenance performance, overdue tasks, and team workload.";
+    }
+    if (q.includes("preventive")) {
+      return "Preventive requests are scheduled tasks to keep equipment running smoothly and avoid breakdowns. You can view them in the Calendar or Maintenance module.";
+    }
+    if (q.includes("hello") || q.includes("hi") || q.includes("hey")) {
+      return "Hello! How can I help you with GearGuard today?";
+    }
+    if (q.includes("help")) {
+      return "I can answer questions about maintenance, teams, equipment, kanban, reports, and preventive requests.";
+    }
+    return "Sorry, I can only answer questions about maintenance, teams, equipment, kanban, reports, and preventive requests.";
+  }
 
   return (
     <>

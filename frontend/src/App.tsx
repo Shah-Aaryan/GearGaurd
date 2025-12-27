@@ -18,6 +18,7 @@ import WorkCenters from "./pages/WorkCenters";
 import Reporting from "./pages/Reporting";
 import { AppLayout } from "./components/layout/AppLayout";
 import NotFound from "./pages/NotFound";
+import ThreeDEquipments from "./pages/threedEquipments";
 
 const queryClient = new QueryClient();
 
@@ -42,8 +43,10 @@ const App = () => (
                   <Route path="teams" element={<Teams />} />
                   <Route path="work-centers" element={<WorkCenters />} />
                   <Route path="reporting" element={<Reporting />} />
+                  <Route path="equipment-3d" element={<ThreeDEquipments />} />
                 </Route>
                 <Route path="*" element={<NotFound />} />
+                
               </Routes>
             </BrowserRouter>
           </EquipmentProvider>

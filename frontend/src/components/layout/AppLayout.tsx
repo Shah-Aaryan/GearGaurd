@@ -13,6 +13,7 @@ import {
   BarChart3,
   Factory,
   Search,
+  Box,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +26,7 @@ const menuItems = [
   { icon: Users, label: "Teams", path: "/app/teams" },
   { icon: Factory, label: "Work Centers", path: "/app/work-centers" },
   { icon: BarChart3, label: "Reporting", path: "/app/reporting" },
+  { icon: Box , label: "3D Equipments", path: "/app/equipment-3d" },
 ];
 
 export function AppLayout() {
